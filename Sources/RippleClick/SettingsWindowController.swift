@@ -19,6 +19,12 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         ("color.white", NSColor(red: 1, green: 1, blue: 1, alpha: 1)),
     ]
 
+    private static let windowWidth: CGFloat = 320
+    private static let windowHeight: CGFloat = 248
+    private static let margin: CGFloat = 20
+    private static let colorButtonSize: CGFloat = 28
+    private static let colorButtonSpacing: CGFloat = 8
+
     private let settingsStore: SettingsStore
     private var window: NSWindow?
     private var sizeLabel: NSTextField?
@@ -38,71 +44,73 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             return
         }
 
-        let width: CGFloat = 320
-        let height: CGFloat = 248
+        let window = createWindow()
+        let contentView = NSView(
+            frame: NSRect(x: 0, y: 0, width: Self.windowWidth, height: Self.windowHeight)
+        )
+        window.contentView = contentView
+
+        var yOffset = Self.windowHeight - 32
+        yOffset = addColorSection(to: contentView, yOffset: yOffset)
+        yOffset = addSizeSection(to: contentView, yOffset: yOffset)
+        yOffset = addGeneralSection(to: contentView, yOffset: yOffset)
+        addResetButton(to: contentView, yOffset: yOffset)
+
+        self.window = window
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: - Window creation
+
+    private func createWindow() -> NSWindow {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: width, height: height),
+            contentRect: NSRect(x: 0, y: 0, width: Self.windowWidth, height: Self.windowHeight),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
-        window.title = L("settings.title")
+        window.title = localized("settings.title")
         window.delegate = self
         window.center()
         window.isReleasedWhenClosed = false
+        return window
+    }
 
-        let contentView = NSView(frame: NSRect(x: 0, y: 0, width: width, height: height))
-        window.contentView = contentView
+    // MARK: - Section builders
 
-        var y = height - 32
+    private func addColorSection(to contentView: NSView, yOffset: CGFloat) -> CGFloat {
+        var currentY = yOffset
+        let label = makeSectionLabel(localized("settings.color"), origin: NSPoint(x: Self.margin, y: currentY))
+        contentView.addSubview(label)
 
-        // --- Color section ---
-        let colorLabel = makeSectionLabel(L("settings.color"), origin: NSPoint(x: 20, y: y))
-        contentView.addSubview(colorLabel)
-
-        let buttonSize: CGFloat = 28
-        let buttonSpacing: CGFloat = 8
         colorButtons = []
-
         for row in 0..<2 {
-            y -= (buttonSize + 4)
+            currentY -= (Self.colorButtonSize + 4)
             for col in 0..<6 {
                 let index = row * 6 + col
                 let preset = Self.colorPresets[index]
-                let x = 20 + CGFloat(col) * (buttonSize + buttonSpacing)
+                let xPos = Self.margin + CGFloat(col) * (Self.colorButtonSize + Self.colorButtonSpacing)
 
-                let button = NSButton(
-                    frame: NSRect(x: x, y: y, width: buttonSize, height: buttonSize)
-                )
-                button.title = ""
-                button.bezelStyle = .circular
-                button.isBordered = false
-                button.wantsLayer = true
-                button.layer?.cornerRadius = buttonSize / 2
-                button.layer?.backgroundColor = preset.color.cgColor
-                button.toolTip = L(preset.key)
-                button.tag = index
-                button.target = self
-                button.action = #selector(colorSelected(_:))
-
-                updateColorButtonBorder(
-                    button,
-                    selected: colorsMatch(preset.color, settingsStore.rippleColor)
+                let button = makeColorButton(
+                    frame: NSRect(x: xPos, y: currentY, width: Self.colorButtonSize, height: Self.colorButtonSize),
+                    preset: preset,
+                    index: index
                 )
                 colorButtons.append(button)
                 contentView.addSubview(button)
             }
         }
+        return currentY
+    }
 
-        // --- Size section ---
-        y -= 28
-        let sizeTitle = makeSectionLabel(L("settings.size"), origin: NSPoint(x: 20, y: y))
-        contentView.addSubview(sizeTitle)
+    private func addSizeSection(to contentView: NSView, yOffset: CGFloat) -> CGFloat {
+        var currentY = yOffset - 28
+        let title = makeSectionLabel(localized("settings.size"), origin: NSPoint(x: Self.margin, y: currentY))
+        contentView.addSubview(title)
 
-        y -= 28
-        let slider = NSSlider(
-            frame: NSRect(x: 20, y: y, width: 200, height: 24)
-        )
+        currentY -= 28
+        let slider = NSSlider(frame: NSRect(x: Self.margin, y: currentY, width: 200, height: 24))
         slider.minValue = 0
         slider.maxValue = Double(Self.sizeSteps.count - 1)
         slider.integerValue = Self.sizeSteps.firstIndex(of: settingsStore.maxRippleSize) ?? 2
@@ -114,9 +122,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         contentView.addSubview(slider)
 
         let currentIndex = Self.sizeSteps.firstIndex(of: settingsStore.maxRippleSize) ?? 2
-        let valueLabel = NSTextField(
-            frame: NSRect(x: 228, y: y + 2, width: 30, height: 20)
-        )
+        let valueLabel = NSTextField(frame: NSRect(x: 228, y: currentY + 2, width: 30, height: 20))
         valueLabel.stringValue = "\(currentIndex + 1)"
         valueLabel.isEditable = false
         valueLabel.isBezeled = false
@@ -126,41 +132,63 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         self.sizeLabel = valueLabel
         contentView.addSubview(valueLabel)
 
-        // --- General section ---
-        y -= 28
-        let generalLabel = makeSectionLabel(L("settings.general"), origin: NSPoint(x: 20, y: y))
-        contentView.addSubview(generalLabel)
+        return currentY
+    }
 
-        y -= 24
-        let loginCheckbox = NSButton(
-            checkboxWithTitle: L("settings.launchAtLogin"),
+    private func addGeneralSection(to contentView: NSView, yOffset: CGFloat) -> CGFloat {
+        var currentY = yOffset - 28
+        let label = makeSectionLabel(localized("settings.general"), origin: NSPoint(x: Self.margin, y: currentY))
+        contentView.addSubview(label)
+
+        currentY -= 24
+        let checkbox = NSButton(
+            checkboxWithTitle: localized("settings.launchAtLogin"),
             target: self, action: #selector(launchAtLoginChanged(_:))
         )
-        loginCheckbox.frame = NSRect(x: 20, y: y, width: 200, height: 20)
-        loginCheckbox.state = settingsStore.launchAtLogin ? .on : .off
-        self.loginCheckbox = loginCheckbox
-        contentView.addSubview(loginCheckbox)
+        checkbox.frame = NSRect(x: Self.margin, y: currentY, width: 200, height: 20)
+        checkbox.state = settingsStore.launchAtLogin ? .on : .off
+        self.loginCheckbox = checkbox
+        contentView.addSubview(checkbox)
 
-        // --- Reset button ---
-        y -= 36
+        return currentY
+    }
+
+    private func addResetButton(to contentView: NSView, yOffset: CGFloat) {
+        let currentY = yOffset - 36
         let resetButton = NSButton(
-            title: L("settings.reset"),
+            title: localized("settings.reset"),
             target: self, action: #selector(resetToDefaults)
         )
         resetButton.bezelStyle = .rounded
         resetButton.sizeToFit()
         resetButton.frame.origin = NSPoint(
-            x: width - resetButton.frame.width - 20,
-            y: y
+            x: Self.windowWidth - resetButton.frame.width - Self.margin,
+            y: currentY
         )
         contentView.addSubview(resetButton)
-
-        self.window = window
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
     }
 
     // MARK: - UI helpers
+
+    private func makeColorButton(
+        frame: NSRect,
+        preset: (key: String, color: NSColor),
+        index: Int
+    ) -> NSButton {
+        let button = NSButton(frame: frame)
+        button.title = ""
+        button.bezelStyle = .circular
+        button.isBordered = false
+        button.wantsLayer = true
+        button.layer?.cornerRadius = Self.colorButtonSize / 2
+        button.layer?.backgroundColor = preset.color.cgColor
+        button.toolTip = localized(preset.key)
+        button.tag = index
+        button.target = self
+        button.action = #selector(colorSelected(_:))
+        updateColorButtonBorder(button, selected: colorsMatch(preset.color, settingsStore.rippleColor))
+        return button
+    }
 
     private func makeSectionLabel(_ text: String, origin: NSPoint) -> NSTextField {
         let label = NSTextField(frame: NSRect(x: origin.x, y: origin.y, width: 280, height: 18))
@@ -173,6 +201,35 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         return label
     }
 
+    private func updateColorButtonBorder(_ button: NSButton, selected: Bool) {
+        if selected {
+            button.layer?.borderColor = NSColor.controlAccentColor.cgColor
+            button.layer?.borderWidth = 3
+        } else {
+            button.layer?.borderColor = NSColor.separatorColor.cgColor
+            button.layer?.borderWidth = 1
+        }
+    }
+
+    private func colorsMatch(_ colorA: NSColor, _ colorB: NSColor) -> Bool {
+        guard let srgbA = colorA.usingColorSpace(.sRGB),
+            let srgbB = colorB.usingColorSpace(.sRGB)
+        else {
+            return false
+        }
+        var red1: CGFloat = 0
+        var green1: CGFloat = 0
+        var blue1: CGFloat = 0
+        var alpha1: CGFloat = 0
+        var red2: CGFloat = 0
+        var green2: CGFloat = 0
+        var blue2: CGFloat = 0
+        var alpha2: CGFloat = 0
+        srgbA.getRed(&red1, green: &green1, blue: &blue1, alpha: &alpha1)
+        srgbB.getRed(&red2, green: &green2, blue: &blue2, alpha: &alpha2)
+        return abs(red1 - red2) < 0.05 && abs(green1 - green2) < 0.05 && abs(blue1 - blue2) < 0.05
+    }
+
     // MARK: - Actions
 
     @objc private func colorSelected(_ sender: NSButton) {
@@ -182,24 +239,6 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         for button in colorButtons {
             updateColorButtonBorder(button, selected: button.tag == sender.tag)
         }
-    }
-
-    private func updateColorButtonBorder(_ button: NSButton, selected: Bool) {
-        button.layer?.borderColor = selected
-            ? NSColor.controlAccentColor.cgColor
-            : NSColor.separatorColor.cgColor
-        button.layer?.borderWidth = selected ? 3 : 1
-    }
-
-    private func colorsMatch(_ a: NSColor, _ b: NSColor) -> Bool {
-        guard let a = a.usingColorSpace(.sRGB), let b = b.usingColorSpace(.sRGB) else {
-            return false
-        }
-        var r1: CGFloat = 0, g1: CGFloat = 0, b1: CGFloat = 0, a1: CGFloat = 0
-        var r2: CGFloat = 0, g2: CGFloat = 0, b2: CGFloat = 0, a2: CGFloat = 0
-        a.getRed(&r1, green: &g1, blue: &b1, alpha: &a1)
-        b.getRed(&r2, green: &g2, blue: &b2, alpha: &a2)
-        return abs(r1 - r2) < 0.05 && abs(g1 - g2) < 0.05 && abs(b1 - b2) < 0.05
     }
 
     @objc private func sizeChanged(_ sender: NSSlider) {

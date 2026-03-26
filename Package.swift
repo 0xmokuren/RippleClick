@@ -10,8 +10,7 @@ let package = Package(
     targets: [
         .target(
             name: "RippleClickLib",
-            path: "Sources/RippleClick",
-            exclude: ["Resources"]
+            path: "Sources/RippleClick"
         ),
         .executableTarget(
             name: "RippleClick",

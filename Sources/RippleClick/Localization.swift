@@ -105,6 +105,6 @@ private let currentLanguage: String = {
     return preferred.first ?? "en"
 }()
 
-func L(_ key: String) -> String {
+func localized(_ key: String) -> String {
     strings[currentLanguage]?[key] ?? strings["en"]?[key] ?? key
 }

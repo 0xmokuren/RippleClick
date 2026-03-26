@@ -34,16 +34,16 @@ public final class SettingsStore {
             )
         }
         set {
-            var r: CGFloat = 0
-            var g: CGFloat = 0
-            var b: CGFloat = 0
-            var a: CGFloat = 0
+            var red: CGFloat = 0
+            var green: CGFloat = 0
+            var blue: CGFloat = 0
+            var alpha: CGFloat = 0
             let color = newValue.usingColorSpace(.sRGB) ?? newValue
-            color.getRed(&r, green: &g, blue: &b, alpha: &a)
-            defaults.set(Double(r), forKey: Keys.rippleColorRed)
-            defaults.set(Double(g), forKey: Keys.rippleColorGreen)
-            defaults.set(Double(b), forKey: Keys.rippleColorBlue)
-            defaults.set(Double(a), forKey: Keys.rippleColorAlpha)
+            color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+            defaults.set(Double(red), forKey: Keys.rippleColorRed)
+            defaults.set(Double(green), forKey: Keys.rippleColorGreen)
+            defaults.set(Double(blue), forKey: Keys.rippleColorBlue)
+            defaults.set(Double(alpha), forKey: Keys.rippleColorAlpha)
             NotificationCenter.default.post(name: .rippleColorChanged, object: nil)
         }
     }
@@ -73,6 +73,6 @@ public final class SettingsStore {
     }
 }
 
-public extension Notification.Name {
-    static let rippleColorChanged = Notification.Name("rippleColorChanged")
+extension Notification.Name {
+    public static let rippleColorChanged = Notification.Name("rippleColorChanged")
 }

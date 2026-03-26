@@ -27,23 +27,29 @@ final class SettingsStoreTests: XCTestCase {
     func testRippleColorDefaultsToCyan() {
         let store = makeStore()
         let color = store.rippleColor.usingColorSpace(.sRGB)!
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        color.getRed(&r, green: &g, blue: &b, alpha: &a)
-        XCTAssertEqual(r, 0, accuracy: 0.01)
-        XCTAssertEqual(g, 1, accuracy: 0.01)
-        XCTAssertEqual(b, 1, accuracy: 0.01)
-        XCTAssertEqual(a, 1, accuracy: 0.01)
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        XCTAssertEqual(red, 0, accuracy: 0.01)
+        XCTAssertEqual(green, 1, accuracy: 0.01)
+        XCTAssertEqual(blue, 1, accuracy: 0.01)
+        XCTAssertEqual(alpha, 1, accuracy: 0.01)
     }
 
     func testRippleColorPersistsCustomColor() {
         let store = makeStore()
         store.rippleColor = NSColor(red: 1, green: 0, blue: 0, alpha: 1)
         let color = store.rippleColor.usingColorSpace(.sRGB)!
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        color.getRed(&r, green: &g, blue: &b, alpha: &a)
-        XCTAssertEqual(r, 1, accuracy: 0.01)
-        XCTAssertEqual(g, 0, accuracy: 0.01)
-        XCTAssertEqual(b, 0, accuracy: 0.01)
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        XCTAssertEqual(red, 1, accuracy: 0.01)
+        XCTAssertEqual(green, 0, accuracy: 0.01)
+        XCTAssertEqual(blue, 0, accuracy: 0.01)
     }
 
     func testRippleColorPostsNotification() {

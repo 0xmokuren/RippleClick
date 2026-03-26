@@ -43,10 +43,11 @@ final class StatusBarController {
                 height: dotRadius * 2
             )
             let dotPath = NSBezierPath(ovalIn: dotRect)
-            let dotColor = self.settingsStore.isEnabled
-                ? self.settingsStore.rippleColor
-                : NSColor.tertiaryLabelColor
-            dotColor.setFill()
+            if self.settingsStore.isEnabled {
+                self.settingsStore.rippleColor.setFill()
+            } else {
+                NSColor.tertiaryLabelColor.setFill()
+            }
             dotPath.fill()
 
             return true
@@ -63,7 +64,7 @@ final class StatusBarController {
         let menu = NSMenu()
 
         toggleMenuItem = NSMenuItem(
-            title: L("menu.toggle"),
+            title: localized("menu.toggle"),
             action: #selector(toggleEffect),
             keyEquivalent: ""
         )
@@ -74,7 +75,7 @@ final class StatusBarController {
         menu.addItem(.separator())
 
         let settingsItem = NSMenuItem(
-            title: L("menu.settings"),
+            title: localized("menu.settings"),
             action: #selector(openSettings),
             keyEquivalent: ","
         )
@@ -84,7 +85,7 @@ final class StatusBarController {
         menu.addItem(.separator())
 
         let aboutItem = NSMenuItem(
-            title: L("menu.about"),
+            title: localized("menu.about"),
             action: #selector(showAbout),
             keyEquivalent: ""
         )
@@ -92,7 +93,7 @@ final class StatusBarController {
         menu.addItem(aboutItem)
 
         let quitItem = NSMenuItem(
-            title: L("menu.quit"),
+            title: localized("menu.quit"),
             action: #selector(quit),
             keyEquivalent: "q"
         )
