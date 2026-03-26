@@ -24,10 +24,13 @@ jobs:
       - name: Create ZIP
         run: ditto -c -k --keepParent RippleClick.app "RippleClick-${{ steps.version.outputs.version }}.zip"
 
+      - name: Compute SHA256
+        id: sha
+        run: echo "sha256=$(shasum -a 256 RippleClick-${{ steps.version.outputs.version }}.zip | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
       - name: Generate Release Notes
         id: notes
         run: |
-          # Get commits since previous tag
           PREV_TAG=$(git tag --sort=-version:refname | head -2 | tail -1)
           if [ -n "$PREV_TAG" ] && [ "$PREV_TAG" != "$GITHUB_REF_NAME" ]; then
             COMMITS=$(git log "$PREV_TAG".."$GITHUB_REF_NAME" --pretty=format:"- %s" --no-merges)
@@ -42,9 +45,12 @@ jobs:
             echo ""
             echo "## Installation"
             echo ""
-            echo "1. Download \`RippleClick-${{ steps.version.outputs.version }}.zip\`"
-            echo "2. Unzip and move \`RippleClick.app\` to Applications"
-            echo "3. Launch and grant Accessibility permission when prompted"
+            echo "\`\`\`bash"
+            echo "brew tap 0xmokuren/tap"
+            echo "brew install --cask rippleclick"
+            echo "\`\`\`"
+            echo ""
+            echo "Or download \`RippleClick-${{ steps.version.outputs.version }}.zip\` below."
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -55,3 +61,37 @@ jobs:
           body: ${{ steps.notes.outputs.notes }}
           files: "RippleClick-${{ steps.version.outputs.version }}.zip"
           generate_release_notes: false
+
+      - name: Update Homebrew Cask
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git clone https://x-access-token:${GH_TOKEN}@github.com/0xmokuren/homebrew-tap.git /tmp/homebrew-tap
+          cd /tmp/homebrew-tap
+
+          cat > Casks/rippleclick.rb << 'RUBY'
+          cask "rippleclick" do
+            version "${{ steps.version.outputs.version }}"
+            sha256 "${{ steps.sha.outputs.sha256 }}"
+
+            url "https://github.com/0xmokuren/RippleClick/releases/download/v#{version}/RippleClick-#{version}.zip"
+            name "RippleClick"
+            desc "macOS menu bar utility that shows ripple effects on left click"
+            homepage "https://github.com/0xmokuren/RippleClick"
+
+            app "RippleClick.app"
+
+            zap trash: [
+              "~/Library/Preferences/com.0xmokuren.RippleClick.plist",
+            ]
+          end
+          RUBY
+
+          # Remove leading spaces from heredoc
+          sed -i '' 's/^          //' Casks/rippleclick.rb
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/rippleclick.rb
+          git commit -m "Update RippleClick to v${{ steps.version.outputs.version }}"
+          git push
