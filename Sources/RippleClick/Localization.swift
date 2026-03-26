@@ -1,18 +1,110 @@
 import Foundation
 
-private let localizedBundle: Bundle = {
-    let module = Bundle.module
-    let supported = module.localizations
+private let strings: [String: [String: String]] = [
+    "en": [
+        "menu.toggle": "Effect ON",
+        "menu.settings": "Settings...",
+        "menu.about": "About RippleClick",
+        "menu.quit": "Quit",
+        "settings.title": "RippleClick Settings",
+        "settings.color": "Effect Color",
+        "settings.size": "Ripple Size",
+        "settings.general": "General",
+        "settings.launchAtLogin": "Launch at Login",
+        "settings.reset": "Reset to Defaults",
+        "color.cyan": "Cyan",
+        "color.blue": "Blue",
+        "color.navy": "Navy",
+        "color.purple": "Purple",
+        "color.pink": "Pink",
+        "color.red": "Red",
+        "color.orange": "Orange",
+        "color.yellow": "Yellow",
+        "color.lime": "Lime",
+        "color.green": "Green",
+        "color.teal": "Teal",
+        "color.white": "White",
+    ],
+    "ja": [
+        "menu.toggle": "エフェクト ON",
+        "menu.settings": "設定...",
+        "menu.about": "RippleClick について",
+        "menu.quit": "終了",
+        "settings.title": "RippleClick 設定",
+        "settings.color": "エフェクトの色",
+        "settings.size": "波紋の最大サイズ",
+        "settings.general": "一般",
+        "settings.launchAtLogin": "ログイン時に自動起動",
+        "settings.reset": "デフォルトに戻す",
+        "color.cyan": "シアン",
+        "color.blue": "ブルー",
+        "color.navy": "ネイビー",
+        "color.purple": "パープル",
+        "color.pink": "ピンク",
+        "color.red": "レッド",
+        "color.orange": "オレンジ",
+        "color.yellow": "イエロー",
+        "color.lime": "ライム",
+        "color.green": "グリーン",
+        "color.teal": "ティール",
+        "color.white": "ホワイト",
+    ],
+    "zh-Hans": [
+        "menu.toggle": "效果 ON",
+        "menu.settings": "设置...",
+        "menu.about": "关于 RippleClick",
+        "menu.quit": "退出",
+        "settings.title": "RippleClick 设置",
+        "settings.color": "效果颜色",
+        "settings.size": "波纹最大尺寸",
+        "settings.general": "通用",
+        "settings.launchAtLogin": "登录时自动启动",
+        "settings.reset": "恢复默认设置",
+        "color.cyan": "青色",
+        "color.blue": "蓝色",
+        "color.navy": "海军蓝",
+        "color.purple": "紫色",
+        "color.pink": "粉色",
+        "color.red": "红色",
+        "color.orange": "橙色",
+        "color.yellow": "黄色",
+        "color.lime": "黄绿色",
+        "color.green": "绿色",
+        "color.teal": "蓝绿色",
+        "color.white": "白色",
+    ],
+    "ko": [
+        "menu.toggle": "이펙트 ON",
+        "menu.settings": "설정...",
+        "menu.about": "RippleClick 정보",
+        "menu.quit": "종료",
+        "settings.title": "RippleClick 설정",
+        "settings.color": "이펙트 색상",
+        "settings.size": "파문 최대 크기",
+        "settings.general": "일반",
+        "settings.launchAtLogin": "로그인 시 자동 실행",
+        "settings.reset": "기본값으로 복원",
+        "color.cyan": "시안",
+        "color.blue": "블루",
+        "color.navy": "네이비",
+        "color.purple": "퍼플",
+        "color.pink": "핑크",
+        "color.red": "레드",
+        "color.orange": "오렌지",
+        "color.yellow": "옐로",
+        "color.lime": "라임",
+        "color.green": "그린",
+        "color.teal": "틸",
+        "color.white": "화이트",
+    ],
+]
+
+private let currentLanguage: String = {
+    let supported = Array(strings.keys)
     let preferred = Bundle.preferredLocalizations(from: supported)
-    if let lang = preferred.first,
-        let path = module.path(forResource: lang, ofType: "lproj"),
-        let bundle = Bundle(path: path)
-    {
-        return bundle
-    }
-    return module
+    return preferred.first ?? "en"
 }()
 
 func L(_ key: String) -> String {
-    NSLocalizedString(key, bundle: localizedBundle, comment: "")
+    strings[currentLanguage]?[key] ?? strings["en"]?[key] ?? key
 }

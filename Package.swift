@@ -4,7 +4,6 @@ import PackageDescription
 
 let package = Package(
     name: "RippleClick",
-    defaultLocalization: "en",
     platforms: [
         .macOS(.v13)
     ],
@@ -12,7 +11,7 @@ let package = Package(
         .target(
             name: "RippleClickLib",
             path: "Sources/RippleClick",
-            resources: [.process("Resources")]
+            exclude: ["Resources"]
         ),
         .executableTarget(
             name: "RippleClick",
