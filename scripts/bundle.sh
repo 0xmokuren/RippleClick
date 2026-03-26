@@ -23,14 +23,17 @@ if [ "$VERSION" != "dev" ]; then
     /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${VERSION}" RippleClick.app/Contents/Info.plist
 fi
 
+# Copy resource bundle next to executable (where Bundle.module expects it)
 RESOURCE_BUNDLE=$(find .build -path "*/release/RippleClick_RippleClickLib.bundle" -type d | head -1)
 if [ -n "$RESOURCE_BUNDLE" ]; then
-    cp -R "$RESOURCE_BUNDLE" RippleClick.app/Contents/Resources/
+    cp -R "$RESOURCE_BUNDLE" RippleClick.app/Contents/MacOS/
 else
     echo "Warning: Resource bundle not found"
 fi
 
+# Remove extended attributes and sign
+xattr -cr RippleClick.app
 echo "Signing..."
-codesign --force --sign - RippleClick.app
+codesign --force --sign - --deep RippleClick.app
 
 echo "Done! Run with: open RippleClick.app"
