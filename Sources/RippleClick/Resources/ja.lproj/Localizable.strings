@@ -1,0 +1,27 @@
+/* Menu */
+"menu.toggle" = "エフェクト ON";
+"menu.settings" = "設定...";
+"menu.about" = "RippleClick について";
+"menu.quit" = "終了";
+
+/* Settings Window */
+"settings.title" = "RippleClick 設定";
+"settings.color" = "エフェクトの色";
+"settings.size" = "波紋の最大サイズ";
+"settings.general" = "一般";
+"settings.launchAtLogin" = "ログイン時に自動起動";
+"settings.reset" = "デフォルトに戻す";
+
+/* Color Names */
+"color.cyan" = "シアン";
+"color.blue" = "ブルー";
+"color.navy" = "ネイビー";
+"color.purple" = "パープル";
+"color.pink" = "ピンク";
+"color.red" = "レッド";
+"color.orange" = "オレンジ";
+"color.yellow" = "イエロー";
+"color.lime" = "ライム";
+"color.green" = "グリーン";
+"color.teal" = "ティール";
+"color.white" = "ホワイト";

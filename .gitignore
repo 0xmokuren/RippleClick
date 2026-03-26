@@ -1,0 +1,7 @@
+.build/
+.swiftpm/
+RippleClick.app/
+.DS_Store
+*.xcodeproj
+*.xcworkspace
+xcuserdata/

@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: swift build
+
+      - name: Test
+        run: swift test
+
+      - name: Create App Bundle
+        run: bash scripts/bundle.sh
+
+      - name: Upload App Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: RippleClick.app
+          path: RippleClick.app
+
+  lint:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: SwiftLint
+        run: |
+          brew install swiftlint
+          swiftlint lint --strict
+
+  format:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check formatting
+        run: |
+          brew install swift-format
+          swift-format lint --strict --recursive Sources/ Tests/

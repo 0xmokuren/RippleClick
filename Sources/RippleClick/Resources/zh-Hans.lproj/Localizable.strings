@@ -1,0 +1,27 @@
+/* Menu */
+"menu.toggle" = "效果 ON";
+"menu.settings" = "设置...";
+"menu.about" = "关于 RippleClick";
+"menu.quit" = "退出";
+
+/* Settings Window */
+"settings.title" = "RippleClick 设置";
+"settings.color" = "效果颜色";
+"settings.size" = "波纹最大尺寸";
+"settings.general" = "通用";
+"settings.launchAtLogin" = "登录时自动启动";
+"settings.reset" = "恢复默认设置";
+
+/* Color Names */
+"color.cyan" = "青色";
+"color.blue" = "蓝色";
+"color.navy" = "海军蓝";
+"color.purple" = "紫色";
+"color.pink" = "粉色";
+"color.red" = "红色";
+"color.orange" = "橙色";
+"color.yellow" = "黄色";
+"color.lime" = "黄绿色";
+"color.green" = "绿色";
+"color.teal" = "蓝绿色";
+"color.white" = "白色";
