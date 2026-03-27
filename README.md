@@ -1,47 +1,49 @@
 # RippleClick
 
-macOSで左クリック時にマウスポインタの位置に波紋（リップル）エフェクトを表示するメニューバー常駐型ユーティリティアプリ。
+English | [日本語](README.ja.md) | [简体中文](README.zh-Hans.md) | [한국어](README.ko.md)
 
-## インストール
+A macOS menu bar utility that displays a ripple effect at the mouse pointer position on left click.
 
-### Homebrew（推奨）
+## Install
+
+### Homebrew (Recommended)
 
 ```bash
 brew tap 0xmokuren/tap
 brew install --cask rippleclick
 ```
 
-### 手動ダウンロード
+### Manual Download
 
-[Releases](https://github.com/0xmokuren/RippleClick/releases) から最新の `.zip` をダウンロードし、解凍して `RippleClick.app` を Applications フォルダに移動してください。
+Download the latest `.zip` from [Releases](https://github.com/0xmokuren/RippleClick/releases), extract it, and move `RippleClick.app` to your Applications folder.
 
-> **初回起動時の注意:** 「システム設定」→「プライバシーとセキュリティ」→「このまま開く」で許可が必要です。また、クリック検知のためにアクセシビリティ権限の許可を求められます。
+> **First launch note:** You need to allow the app via "System Settings" → "Privacy & Security" → "Open Anyway". You will also be prompted to grant Accessibility permission for click detection.
 
-## 機能
+## Features
 
-- 左クリック時に波紋エフェクトを表示
-- メニューバーからエフェクトのON/OFF切り替え
-- 設定画面でカスタマイズ可能:
-  - エフェクトの色（12色プリセット）
-  - 波紋の最大サイズ（5段階）
-  - ログイン時の自動起動
-- 多言語対応（英語・日本語・中国語・韓国語）
+- Displays a ripple effect on left click
+- Toggle the effect ON/OFF from the menu bar
+- Customizable via the settings window:
+  - Effect color (12 color presets)
+  - Maximum ripple size (5 levels)
+  - Launch at login
+- Multilingual support (English, Japanese, Chinese, Korean)
 
-## 必要環境
+## Requirements
 
-- macOS 13 (Ventura) 以降
+- macOS 13 (Ventura) or later
 
-## ビルド（開発者向け）
+## Build (For Developers)
 
 ```bash
-# 開発時
+# Development
 swift run
 
-# リリースビルド（.app バンドル）
+# Release build (.app bundle)
 bash scripts/bundle.sh
 open RippleClick.app
 ```
 
-## ライセンス
+## License
 
 [MIT License](LICENSE)
