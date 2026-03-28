@@ -2,10 +2,11 @@ import AppKit
 
 @MainActor
 final class RippleWindowController {
-    private static let maxConcurrentWindows = 20
+    static let maxConcurrentWindows = 10
 
     private let settingsStore: SettingsStore
     private var activeWindows: [NSWindow] = []
+    private var windowPool: [NSWindow] = []
 
     init(settingsStore: SettingsStore) {
         self.settingsStore = settingsStore
@@ -14,7 +15,7 @@ final class RippleWindowController {
     func showRipple(at screenPoint: NSPoint) {
         if activeWindows.count >= Self.maxConcurrentWindows {
             let oldest = activeWindows.removeFirst()
-            oldest.orderOut(nil)
+            recycleWindow(oldest)
         }
 
         let size = max(10, min(settingsStore.maxRippleSize, 500))
@@ -25,8 +26,31 @@ final class RippleWindowController {
             height: size
         )
 
+        let window = acquireWindow(frame: windowRect, size: size)
+        activeWindows.append(window)
+
+        window.orderFrontRegardless()
+        (window.contentView as? RippleView)?.startAnimation()
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) { [weak self, weak window] in
+            guard let window = window else { return }
+            self?.activeWindows.removeAll { $0 === window }
+            self?.recycleWindow(window)
+        }
+    }
+
+    private func acquireWindow(frame: NSRect, size: CGFloat) -> NSWindow {
+        if let window = windowPool.popLast() {
+            window.setFrame(frame, display: false)
+            if let rippleView = window.contentView as? RippleView {
+                rippleView.frame = NSRect(x: 0, y: 0, width: size, height: size)
+                rippleView.reset(color: settingsStore.rippleColor, maxSize: size)
+            }
+            return window
+        }
+
         let window = NSWindow(
-            contentRect: windowRect,
+            contentRect: frame,
             styleMask: .borderless,
             backing: .buffered,
             defer: false
@@ -38,22 +62,20 @@ final class RippleWindowController {
         window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.maximumWindow)))
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
 
-        activeWindows.append(window)
-
         let rippleView = RippleView(
             frame: NSRect(x: 0, y: 0, width: size, height: size),
             color: settingsStore.rippleColor,
             maxSize: size
         )
-
         window.contentView = rippleView
-        window.orderFrontRegardless()
-        rippleView.startAnimation()
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) { [weak self, weak window] in
-            guard let window = window else { return }
-            window.orderOut(nil)
-            self?.activeWindows.removeAll { $0 === window }
+        return window
+    }
+
+    private func recycleWindow(_ window: NSWindow) {
+        window.orderOut(nil)
+        if windowPool.count < Self.maxConcurrentWindows {
+            windowPool.append(window)
         }
     }
 }

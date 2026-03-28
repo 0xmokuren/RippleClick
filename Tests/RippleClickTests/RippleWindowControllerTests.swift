@@ -34,7 +34,8 @@ final class RippleWindowControllerTests: XCTestCase {
     func testMaxConcurrentWindowsLimit() {
         let store = makeSettingsStore()
         let controller = RippleWindowController(settingsStore: store)
-        for i in 0..<25 {
+        let limit = RippleWindowController.maxConcurrentWindows
+        for i in 0..<(limit + 5) {
             controller.showRipple(at: NSPoint(x: CGFloat(i * 10), y: 100))
         }
     }

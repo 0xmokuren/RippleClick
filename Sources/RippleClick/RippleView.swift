@@ -8,14 +8,21 @@ final class RippleView: NSView {
     private static let fillOpacity: CGFloat = 0.15
     private static let animationDuration: CFTimeInterval = 0.5
 
-    private let rippleColor: NSColor
-    private let maxSize: CGFloat
+    private var rippleColor: NSColor
+    private var maxSize: CGFloat
 
     init(frame: NSRect, color: NSColor, maxSize: CGFloat) {
         self.rippleColor = color
         self.maxSize = maxSize
         super.init(frame: frame)
         wantsLayer = true
+    }
+
+    func reset(color: NSColor, maxSize: CGFloat) {
+        self.rippleColor = color
+        self.maxSize = maxSize
+        layer?.sublayers?.forEach { $0.removeFromSuperlayer() }
+        layer?.removeAllAnimations()
     }
 
     @available(*, unavailable)
