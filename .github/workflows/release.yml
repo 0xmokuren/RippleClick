@@ -64,7 +64,7 @@ jobs:
 
       - name: Update Homebrew Cask
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           git clone https://x-access-token:${GH_TOKEN}@github.com/0xmokuren/homebrew-tap.git /tmp/homebrew-tap
           cd /tmp/homebrew-tap
