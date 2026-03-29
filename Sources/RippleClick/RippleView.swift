@@ -31,7 +31,11 @@ final class RippleView: NSView {
         self.maxSize = maxSize
         self.animationDuration = duration
         self.rippleOpacity = opacity
-        layer?.sublayers?.forEach { $0.removeFromSuperlayer() }
+        if let sublayers = layer?.sublayers {
+            for sublayer in sublayers {
+                sublayer.removeFromSuperlayer()
+            }
+        }
         layer?.removeAllAnimations()
     }
 

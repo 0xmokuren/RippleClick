@@ -129,7 +129,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         currentY -= 16
         addEdgeLabels(
             to: contentView,
-            y: currentY,
+            yPosition: currentY,
             minText: localized("settings.size.min"),
             maxText: localized("settings.size.max"),
             sliderWidth: 200
@@ -158,7 +158,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         currentY -= 16
         addEdgeLabels(
             to: contentView,
-            y: currentY,
+            yPosition: currentY,
             minText: localized("settings.speed.min"),
             maxText: localized("settings.speed.max"),
             sliderWidth: 200
@@ -187,7 +187,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         currentY -= 16
         addEdgeLabels(
             to: contentView,
-            y: currentY,
+            yPosition: currentY,
             minText: localized("settings.opacity.min"),
             maxText: localized("settings.opacity.max"),
             sliderWidth: 200
@@ -253,12 +253,12 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     private func addEdgeLabels(
         to contentView: NSView,
-        y: CGFloat,
+        yPosition: CGFloat,
         minText: String,
         maxText: String,
         sliderWidth: CGFloat
     ) {
-        let minLabel = NSTextField(frame: NSRect(x: Self.margin, y: y, width: 60, height: 14))
+        let minLabel = NSTextField(frame: NSRect(x: Self.margin, y: yPosition, width: 60, height: 14))
         minLabel.stringValue = minText
         minLabel.isEditable = false
         minLabel.isBezeled = false
@@ -269,7 +269,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         contentView.addSubview(minLabel)
 
         let maxLabel = NSTextField(
-            frame: NSRect(x: Self.margin + sliderWidth - 60, y: y, width: 60, height: 14)
+            frame: NSRect(x: Self.margin + sliderWidth - 60, y: yPosition, width: 60, height: 14)
         )
         maxLabel.stringValue = maxText
         maxLabel.isEditable = false

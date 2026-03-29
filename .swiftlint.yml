@@ -17,3 +17,7 @@ opt_in_rules:
 line_length:
   warning: 120
   error: 150
+
+type_body_length:
+  warning: 350
+  error: 500
