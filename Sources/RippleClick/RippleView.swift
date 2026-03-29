@@ -6,21 +6,31 @@ final class RippleView: NSView {
     private static let initialRadius: CGFloat = 5
     private static let strokeWidth: CGFloat = 3.0
     private static let fillOpacity: CGFloat = 0.15
-    private static let animationDuration: CFTimeInterval = 0.5
-
     private var rippleColor: NSColor
     private var maxSize: CGFloat
+    private var animationDuration: CFTimeInterval
+    private var rippleOpacity: CGFloat
 
-    init(frame: NSRect, color: NSColor, maxSize: CGFloat) {
+    init(
+        frame: NSRect,
+        color: NSColor,
+        maxSize: CGFloat,
+        duration: CFTimeInterval = 0.5,
+        opacity: CGFloat = 1.0
+    ) {
         self.rippleColor = color
         self.maxSize = maxSize
+        self.animationDuration = duration
+        self.rippleOpacity = opacity
         super.init(frame: frame)
         wantsLayer = true
     }
 
-    func reset(color: NSColor, maxSize: CGFloat) {
+    func reset(color: NSColor, maxSize: CGFloat, duration: CFTimeInterval, opacity: CGFloat) {
         self.rippleColor = color
         self.maxSize = maxSize
+        self.animationDuration = duration
+        self.rippleOpacity = opacity
         layer?.sublayers?.forEach { $0.removeFromSuperlayer() }
         layer?.removeAllAnimations()
     }
@@ -57,8 +67,8 @@ final class RippleView: NSView {
 
         let circleLayer = CAShapeLayer()
         circleLayer.path = initialPath
-        circleLayer.fillColor = rippleColor.withAlphaComponent(Self.fillOpacity).cgColor
-        circleLayer.strokeColor = rippleColor.cgColor
+        circleLayer.fillColor = rippleColor.withAlphaComponent(Self.fillOpacity * rippleOpacity).cgColor
+        circleLayer.strokeColor = rippleColor.withAlphaComponent(rippleOpacity).cgColor
         circleLayer.lineWidth = Self.strokeWidth
         circleLayer.frame = bounds
         layer.addSublayer(circleLayer)
@@ -73,7 +83,7 @@ final class RippleView: NSView {
 
         let group = CAAnimationGroup()
         group.animations = [pathAnimation, opacityAnimation]
-        group.duration = Self.animationDuration
+        group.duration = animationDuration
         group.timingFunction = CAMediaTimingFunction(name: .easeOut)
         group.fillMode = .forwards
         group.isRemovedOnCompletion = false

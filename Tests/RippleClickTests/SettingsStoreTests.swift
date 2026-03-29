@@ -72,6 +72,47 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.maxRippleSize, 30)
     }
 
+    func testAnimationDurationDefaultsTo0_5() {
+        let store = makeStore()
+        XCTAssertEqual(store.animationDuration, 0.5, accuracy: 0.001)
+    }
+
+    func testAnimationDurationPersistsValue() {
+        let store = makeStore()
+        store.animationDuration = 0.25
+        XCTAssertEqual(store.animationDuration, 0.25, accuracy: 0.001)
+        store.animationDuration = 1.0
+        XCTAssertEqual(store.animationDuration, 1.0, accuracy: 0.001)
+    }
+
+    func testSpeedStepsHasFiveLevels() {
+        let steps = SettingsWindowController.speedSteps
+        XCTAssertEqual(steps.count, 5)
+        XCTAssertEqual(steps.first, 0.25)
+        XCTAssertEqual(steps.last, 1.0)
+        XCTAssertEqual(steps[2], 0.5)
+    }
+
+    func testRippleOpacityDefaultsTo1() {
+        let store = makeStore()
+        XCTAssertEqual(store.rippleOpacity, 1.0, accuracy: 0.001)
+    }
+
+    func testRippleOpacityPersistsValue() {
+        let store = makeStore()
+        store.rippleOpacity = 0.4
+        XCTAssertEqual(store.rippleOpacity, 0.4, accuracy: 0.001)
+        store.rippleOpacity = 0.8
+        XCTAssertEqual(store.rippleOpacity, 0.8, accuracy: 0.001)
+    }
+
+    func testOpacityStepsHasFiveLevels() {
+        let steps = SettingsWindowController.opacitySteps
+        XCTAssertEqual(steps.count, 5)
+        XCTAssertEqual(steps.first, 0.2)
+        XCTAssertEqual(steps.last, 1.0)
+    }
+
     func testSizeStepsHasFiveLevels() {
         let steps = SettingsWindowController.sizeSteps
         XCTAssertEqual(steps.count, 5)

@@ -13,6 +13,8 @@ public final class SettingsStore {
         static let rippleColorBlue = "rippleColorBlue"
         static let rippleColorAlpha = "rippleColorAlpha"
         static let maxRippleSize = "maxRippleSize"
+        static let animationDuration = "animationDuration"
+        static let rippleOpacity = "rippleOpacity"
         static let launchAtLogin = "launchAtLogin"
     }
 
@@ -54,6 +56,22 @@ public final class SettingsStore {
             return value > 0 ? value : 100
         }
         set { defaults.set(Double(newValue), forKey: Keys.maxRippleSize) }
+    }
+
+    public var rippleOpacity: CGFloat {
+        get {
+            let value = defaults.double(forKey: Keys.rippleOpacity)
+            return value > 0 ? CGFloat(value) : 1.0
+        }
+        set { defaults.set(Double(newValue), forKey: Keys.rippleOpacity) }
+    }
+
+    public var animationDuration: CFTimeInterval {
+        get {
+            let value = defaults.double(forKey: Keys.animationDuration)
+            return value > 0 ? value : 0.5
+        }
+        set { defaults.set(Double(newValue), forKey: Keys.animationDuration) }
     }
 
     public var launchAtLogin: Bool {

@@ -3,6 +3,8 @@ import AppKit
 @MainActor
 final class SettingsWindowController: NSObject, NSWindowDelegate {
     public static let sizeSteps: [CGFloat] = [30, 70, 100, 150, 200]
+    public static let speedSteps: [CFTimeInterval] = [0.25, 0.35, 0.5, 0.7, 1.0]
+    public static let opacitySteps: [CGFloat] = [0.2, 0.4, 0.6, 0.8, 1.0]
 
     public static let colorPresets: [(key: String, color: NSColor)] = [
         ("color.cyan", NSColor(red: 0, green: 1, blue: 1, alpha: 1)),
@@ -20,15 +22,16 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     ]
 
     private static let windowWidth: CGFloat = 320
-    private static let windowHeight: CGFloat = 248
+    private static let windowHeight: CGFloat = 440
     private static let margin: CGFloat = 20
     private static let colorButtonSize: CGFloat = 28
     private static let colorButtonSpacing: CGFloat = 8
 
     private let settingsStore: SettingsStore
     private var window: NSWindow?
-    private var sizeLabel: NSTextField?
     private var sizeSlider: NSSlider?
+    private var speedSlider: NSSlider?
+    private var opacitySlider: NSSlider?
     private var loginCheckbox: NSButton?
     private var colorButtons: [NSButton] = []
 
@@ -53,6 +56,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         var yOffset = Self.windowHeight - 32
         yOffset = addColorSection(to: contentView, yOffset: yOffset)
         yOffset = addSizeSection(to: contentView, yOffset: yOffset)
+        yOffset = addSpeedSection(to: contentView, yOffset: yOffset)
+        yOffset = addOpacitySection(to: contentView, yOffset: yOffset)
         yOffset = addGeneralSection(to: contentView, yOffset: yOffset)
         addResetButton(to: contentView, yOffset: yOffset)
 
@@ -121,16 +126,72 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         self.sizeSlider = slider
         contentView.addSubview(slider)
 
-        let currentIndex = Self.sizeSteps.firstIndex(of: settingsStore.maxRippleSize) ?? 2
-        let valueLabel = NSTextField(frame: NSRect(x: 228, y: currentY + 2, width: 30, height: 20))
-        valueLabel.stringValue = "\(currentIndex + 1)"
-        valueLabel.isEditable = false
-        valueLabel.isBezeled = false
-        valueLabel.drawsBackground = false
-        valueLabel.alignment = .center
-        valueLabel.font = .monospacedDigitSystemFont(ofSize: 13, weight: .medium)
-        self.sizeLabel = valueLabel
-        contentView.addSubview(valueLabel)
+        currentY -= 16
+        addEdgeLabels(
+            to: contentView,
+            y: currentY,
+            minText: localized("settings.size.min"),
+            maxText: localized("settings.size.max"),
+            sliderWidth: 200
+        )
+
+        return currentY
+    }
+
+    private func addSpeedSection(to contentView: NSView, yOffset: CGFloat) -> CGFloat {
+        var currentY = yOffset - 28
+        let title = makeSectionLabel(localized("settings.speed"), origin: NSPoint(x: Self.margin, y: currentY))
+        contentView.addSubview(title)
+
+        currentY -= 28
+        let slider = NSSlider(frame: NSRect(x: Self.margin, y: currentY, width: 200, height: 24))
+        slider.minValue = 0
+        slider.maxValue = Double(Self.speedSteps.count - 1)
+        slider.integerValue = Self.speedSteps.firstIndex(of: settingsStore.animationDuration) ?? 2
+        slider.numberOfTickMarks = Self.speedSteps.count
+        slider.allowsTickMarkValuesOnly = true
+        slider.target = self
+        slider.action = #selector(speedChanged(_:))
+        self.speedSlider = slider
+        contentView.addSubview(slider)
+
+        currentY -= 16
+        addEdgeLabels(
+            to: contentView,
+            y: currentY,
+            minText: localized("settings.speed.min"),
+            maxText: localized("settings.speed.max"),
+            sliderWidth: 200
+        )
+
+        return currentY
+    }
+
+    private func addOpacitySection(to contentView: NSView, yOffset: CGFloat) -> CGFloat {
+        var currentY = yOffset - 28
+        let title = makeSectionLabel(localized("settings.opacity"), origin: NSPoint(x: Self.margin, y: currentY))
+        contentView.addSubview(title)
+
+        currentY -= 28
+        let slider = NSSlider(frame: NSRect(x: Self.margin, y: currentY, width: 200, height: 24))
+        slider.minValue = 0
+        slider.maxValue = Double(Self.opacitySteps.count - 1)
+        slider.integerValue = Self.opacitySteps.firstIndex(of: settingsStore.rippleOpacity) ?? 4
+        slider.numberOfTickMarks = Self.opacitySteps.count
+        slider.allowsTickMarkValuesOnly = true
+        slider.target = self
+        slider.action = #selector(opacityChanged(_:))
+        self.opacitySlider = slider
+        contentView.addSubview(slider)
+
+        currentY -= 16
+        addEdgeLabels(
+            to: contentView,
+            y: currentY,
+            minText: localized("settings.opacity.min"),
+            maxText: localized("settings.opacity.max"),
+            sliderWidth: 200
+        )
 
         return currentY
     }
@@ -190,6 +251,36 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         return button
     }
 
+    private func addEdgeLabels(
+        to contentView: NSView,
+        y: CGFloat,
+        minText: String,
+        maxText: String,
+        sliderWidth: CGFloat
+    ) {
+        let minLabel = NSTextField(frame: NSRect(x: Self.margin, y: y, width: 60, height: 14))
+        minLabel.stringValue = minText
+        minLabel.isEditable = false
+        minLabel.isBezeled = false
+        minLabel.drawsBackground = false
+        minLabel.alignment = .left
+        minLabel.font = .systemFont(ofSize: 10)
+        minLabel.textColor = .tertiaryLabelColor
+        contentView.addSubview(minLabel)
+
+        let maxLabel = NSTextField(
+            frame: NSRect(x: Self.margin + sliderWidth - 60, y: y, width: 60, height: 14)
+        )
+        maxLabel.stringValue = maxText
+        maxLabel.isEditable = false
+        maxLabel.isBezeled = false
+        maxLabel.drawsBackground = false
+        maxLabel.alignment = .right
+        maxLabel.font = .systemFont(ofSize: 10)
+        maxLabel.textColor = .tertiaryLabelColor
+        contentView.addSubview(maxLabel)
+    }
+
     private func makeSectionLabel(_ text: String, origin: NSPoint) -> NSTextField {
         let label = NSTextField(frame: NSRect(x: origin.x, y: origin.y, width: 280, height: 18))
         label.stringValue = text
@@ -245,7 +336,18 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         let index = min(sender.integerValue, Self.sizeSteps.count - 1)
         let value = Self.sizeSteps[index]
         settingsStore.maxRippleSize = value
-        sizeLabel?.stringValue = "\(index + 1)"
+    }
+
+    @objc private func speedChanged(_ sender: NSSlider) {
+        let index = min(sender.integerValue, Self.speedSteps.count - 1)
+        let value = Self.speedSteps[index]
+        settingsStore.animationDuration = value
+    }
+
+    @objc private func opacityChanged(_ sender: NSSlider) {
+        let index = min(sender.integerValue, Self.opacitySteps.count - 1)
+        let value = Self.opacitySteps[index]
+        settingsStore.rippleOpacity = value
     }
 
     @objc private func resetToDefaults() {
@@ -256,7 +358,12 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
         settingsStore.maxRippleSize = Self.sizeSteps[2]
         sizeSlider?.integerValue = 2
-        sizeLabel?.stringValue = "3"
+
+        settingsStore.animationDuration = Self.speedSteps[2]
+        speedSlider?.integerValue = 2
+
+        settingsStore.rippleOpacity = Self.opacitySteps[4]
+        opacitySlider?.integerValue = 4
 
         settingsStore.launchAtLogin = false
         loginCheckbox?.state = .off

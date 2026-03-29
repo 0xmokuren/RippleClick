@@ -26,25 +26,35 @@ final class RippleWindowController {
             height: size
         )
 
-        let window = acquireWindow(frame: windowRect, size: size)
+        let duration = settingsStore.animationDuration
+        let opacity = settingsStore.rippleOpacity
+        let window = acquireWindow(frame: windowRect, size: size, duration: duration, opacity: opacity)
         activeWindows.append(window)
 
         window.orderFrontRegardless()
         (window.contentView as? RippleView)?.startAnimation()
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) { [weak self, weak window] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration + 0.05) { [weak self, weak window] in
             guard let window = window else { return }
             self?.activeWindows.removeAll { $0 === window }
             self?.recycleWindow(window)
         }
     }
 
-    private func acquireWindow(frame: NSRect, size: CGFloat) -> NSWindow {
+    private func acquireWindow(
+        frame: NSRect,
+        size: CGFloat,
+        duration: CFTimeInterval,
+        opacity: CGFloat
+    ) -> NSWindow {
         if let window = windowPool.popLast() {
             window.setFrame(frame, display: false)
             if let rippleView = window.contentView as? RippleView {
                 rippleView.frame = NSRect(x: 0, y: 0, width: size, height: size)
-                rippleView.reset(color: settingsStore.rippleColor, maxSize: size)
+                rippleView.reset(
+                    color: settingsStore.rippleColor, maxSize: size,
+                    duration: duration, opacity: opacity
+                )
             }
             return window
         }
@@ -65,7 +75,9 @@ final class RippleWindowController {
         let rippleView = RippleView(
             frame: NSRect(x: 0, y: 0, width: size, height: size),
             color: settingsStore.rippleColor,
-            maxSize: size
+            maxSize: size,
+            duration: duration,
+            opacity: opacity
         )
         window.contentView = rippleView
 
