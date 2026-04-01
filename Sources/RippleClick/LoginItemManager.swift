@@ -1,8 +1,9 @@
 import ServiceManagement
 
 enum LoginItemManager {
-    static func setEnabled(_ enabled: Bool) {
-        guard Bundle.main.bundleIdentifier != nil else { return }
+    @discardableResult
+    static func setEnabled(_ enabled: Bool) -> Bool {
+        guard Bundle.main.bundleIdentifier != nil else { return false }
 
         do {
             if enabled {
@@ -10,8 +11,10 @@ enum LoginItemManager {
             } else {
                 try SMAppService.mainApp.unregister()
             }
+            return true
         } catch {
             print("LoginItemManager: \(enabled ? "register" : "unregister") failed: \(error)")
+            return false
         }
     }
 

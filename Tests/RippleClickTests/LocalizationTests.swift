@@ -23,4 +23,39 @@ final class LocalizationTests: XCTestCase {
             XCTAssertNotEqual(result, key, "Color key '\(key)' should be localized")
         }
     }
+
+    func testAllLanguagesHaveSameKeys() {
+        let allStrings = allLocalizationStrings
+        guard let englishKeys = allStrings["en"]?.keys else {
+            XCTFail("English localization missing")
+            return
+        }
+        let expectedKeys = Set(englishKeys)
+
+        for (language, translations) in allStrings {
+            let actualKeys = Set(translations.keys)
+            let missing = expectedKeys.subtracting(actualKeys)
+            let extra = actualKeys.subtracting(expectedKeys)
+
+            XCTAssertTrue(
+                missing.isEmpty,
+                "Language '\(language)' missing keys: \(missing.sorted())"
+            )
+            XCTAssertTrue(
+                extra.isEmpty,
+                "Language '\(language)' has extra keys: \(extra.sorted())"
+            )
+        }
+    }
+
+    func testAllValuesAreNonEmpty() {
+        for (language, translations) in allLocalizationStrings {
+            for (key, value) in translations {
+                XCTAssertFalse(
+                    value.isEmpty,
+                    "Language '\(language)' has empty value for key '\(key)'"
+                )
+            }
+        }
+    }
 }

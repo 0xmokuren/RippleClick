@@ -118,7 +118,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         let slider = NSSlider(frame: NSRect(x: Self.margin, y: currentY, width: 200, height: 24))
         slider.minValue = 0
         slider.maxValue = Double(Self.sizeSteps.count - 1)
-        slider.integerValue = Self.sizeSteps.firstIndex(of: settingsStore.maxRippleSize) ?? 2
+        slider.integerValue = nearestIndex(for: settingsStore.maxRippleSize, in: Self.sizeSteps)
         slider.numberOfTickMarks = Self.sizeSteps.count
         slider.allowsTickMarkValuesOnly = true
         slider.target = self
@@ -147,7 +147,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         let slider = NSSlider(frame: NSRect(x: Self.margin, y: currentY, width: 200, height: 24))
         slider.minValue = 0
         slider.maxValue = Double(Self.speedSteps.count - 1)
-        slider.integerValue = Self.speedSteps.firstIndex(of: settingsStore.animationDuration) ?? 2
+        slider.integerValue = nearestIndex(for: settingsStore.animationDuration, in: Self.speedSteps)
         slider.numberOfTickMarks = Self.speedSteps.count
         slider.allowsTickMarkValuesOnly = true
         slider.target = self
@@ -176,7 +176,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         let slider = NSSlider(frame: NSRect(x: Self.margin, y: currentY, width: 200, height: 24))
         slider.minValue = 0
         slider.maxValue = Double(Self.opacitySteps.count - 1)
-        slider.integerValue = Self.opacitySteps.firstIndex(of: settingsStore.rippleOpacity) ?? 2
+        slider.integerValue = nearestIndex(for: settingsStore.rippleOpacity, in: Self.opacitySteps)
         slider.numberOfTickMarks = Self.opacitySteps.count
         slider.allowsTickMarkValuesOnly = true
         slider.target = self
@@ -279,6 +279,19 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         maxLabel.font = .systemFont(ofSize: 10)
         maxLabel.textColor = .tertiaryLabelColor
         contentView.addSubview(maxLabel)
+    }
+
+    private func nearestIndex<T: BinaryFloatingPoint>(for value: T, in steps: [T]) -> Int {
+        var bestIndex = 0
+        var bestDiff = T.greatestFiniteMagnitude
+        for (index, step) in steps.enumerated() {
+            let diff = abs(value - step)
+            if diff < bestDiff {
+                bestDiff = diff
+                bestIndex = index
+            }
+        }
+        return bestIndex
     }
 
     private func makeSectionLabel(_ text: String, origin: NSPoint) -> NSTextField {

@@ -113,6 +113,34 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(steps.last, 1.0)
     }
 
+    func testMaxRippleSizeClampsNegativeValue() {
+        let store = makeStore()
+        store.maxRippleSize = -10
+        XCTAssertEqual(store.maxRippleSize, 10)
+    }
+
+    func testMaxRippleSizeClampsExcessiveValue() {
+        let store = makeStore()
+        store.maxRippleSize = 9999
+        XCTAssertEqual(store.maxRippleSize, 500)
+    }
+
+    func testAnimationDurationClampsToRange() {
+        let store = makeStore()
+        store.animationDuration = 0.01
+        XCTAssertEqual(store.animationDuration, 0.1, accuracy: 0.001)
+        store.animationDuration = 99
+        XCTAssertEqual(store.animationDuration, 2.0, accuracy: 0.001)
+    }
+
+    func testRippleOpacityClampsToRange() {
+        let store = makeStore()
+        store.rippleOpacity = 0.0
+        XCTAssertEqual(store.rippleOpacity, 0.1, accuracy: 0.001)
+        store.rippleOpacity = 5.0
+        XCTAssertEqual(store.rippleOpacity, 1.0, accuracy: 0.001)
+    }
+
     func testSizeStepsHasFiveLevels() {
         let steps = SettingsWindowController.sizeSteps
         XCTAssertEqual(steps.count, 5)

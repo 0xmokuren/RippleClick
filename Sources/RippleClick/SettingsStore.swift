@@ -55,7 +55,7 @@ public final class SettingsStore {
             let value = defaults.double(forKey: Keys.maxRippleSize)
             return value > 0 ? value : 100
         }
-        set { defaults.set(Double(newValue), forKey: Keys.maxRippleSize) }
+        set { defaults.set(Double(max(10, min(newValue, 500))), forKey: Keys.maxRippleSize) }
     }
 
     public var rippleOpacity: CGFloat {
@@ -63,7 +63,7 @@ public final class SettingsStore {
             let value = defaults.double(forKey: Keys.rippleOpacity)
             return value > 0 ? CGFloat(value) : 0.6
         }
-        set { defaults.set(Double(newValue), forKey: Keys.rippleOpacity) }
+        set { defaults.set(Double(max(0.1, min(newValue, 1.0))), forKey: Keys.rippleOpacity) }
     }
 
     public var animationDuration: CFTimeInterval {
@@ -71,14 +71,14 @@ public final class SettingsStore {
             let value = defaults.double(forKey: Keys.animationDuration)
             return value > 0 ? value : 0.5
         }
-        set { defaults.set(Double(newValue), forKey: Keys.animationDuration) }
+        set { defaults.set(Double(max(0.1, min(newValue, 2.0))), forKey: Keys.animationDuration) }
     }
 
     public var launchAtLogin: Bool {
         get { defaults.bool(forKey: Keys.launchAtLogin) }
         set {
-            LoginItemManager.setEnabled(newValue)
-            defaults.set(LoginItemManager.isEnabled, forKey: Keys.launchAtLogin)
+            let success = LoginItemManager.setEnabled(newValue)
+            defaults.set(success ? newValue : LoginItemManager.isEnabled, forKey: Keys.launchAtLogin)
         }
     }
 

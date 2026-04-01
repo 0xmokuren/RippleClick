@@ -5,8 +5,8 @@ final class RippleWindowController {
     static let maxConcurrentWindows = 10
 
     private let settingsStore: SettingsStore
-    private var activeWindows: [NSWindow] = []
-    private var windowPool: [NSWindow] = []
+    private(set) var activeWindows: [NSWindow] = []
+    private(set) var windowPool: [NSWindow] = []
 
     init(settingsStore: SettingsStore) {
         self.settingsStore = settingsStore

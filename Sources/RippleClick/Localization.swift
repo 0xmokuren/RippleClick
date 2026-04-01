@@ -1,6 +1,6 @@
 import Foundation
 
-private let strings: [String: [String: String]] = [
+let allLocalizationStrings: [String: [String: String]] = [
     "en": [
         "menu.toggle": "Effect ON",
         "menu.settings": "Settings...",
@@ -132,11 +132,11 @@ private let strings: [String: [String: String]] = [
 ]
 
 private let currentLanguage: String = {
-    let supported = Array(strings.keys)
+    let supported = Array(allLocalizationStrings.keys)
     let preferred = Bundle.preferredLocalizations(from: supported)
     return preferred.first ?? "en"
 }()
 
 func localized(_ key: String) -> String {
-    strings[currentLanguage]?[key] ?? strings["en"]?[key] ?? key
+    allLocalizationStrings[currentLanguage]?[key] ?? allLocalizationStrings["en"]?[key] ?? key
 }
