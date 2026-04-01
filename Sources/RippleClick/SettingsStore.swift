@@ -61,7 +61,7 @@ public final class SettingsStore {
     public var rippleOpacity: CGFloat {
         get {
             let value = defaults.double(forKey: Keys.rippleOpacity)
-            return value > 0 ? CGFloat(value) : 1.0
+            return value > 0 ? CGFloat(value) : 0.6
         }
         set { defaults.set(Double(newValue), forKey: Keys.rippleOpacity) }
     }

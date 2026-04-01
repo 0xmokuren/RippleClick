@@ -4,7 +4,7 @@ import AppKit
 final class SettingsWindowController: NSObject, NSWindowDelegate {
     public static let sizeSteps: [CGFloat] = [30, 70, 100, 150, 200]
     public static let speedSteps: [CFTimeInterval] = [0.25, 0.35, 0.5, 0.7, 1.0]
-    public static let opacitySteps: [CGFloat] = [0.2, 0.4, 0.6, 0.8, 1.0]
+    public static let opacitySteps: [CGFloat] = [0.15, 0.35, 0.6, 0.8, 1.0]
 
     public static let colorPresets: [(key: String, color: NSColor)] = [
         ("color.cyan", NSColor(red: 0, green: 1, blue: 1, alpha: 1)),
@@ -176,7 +176,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         let slider = NSSlider(frame: NSRect(x: Self.margin, y: currentY, width: 200, height: 24))
         slider.minValue = 0
         slider.maxValue = Double(Self.opacitySteps.count - 1)
-        slider.integerValue = Self.opacitySteps.firstIndex(of: settingsStore.rippleOpacity) ?? 4
+        slider.integerValue = Self.opacitySteps.firstIndex(of: settingsStore.rippleOpacity) ?? 2
         slider.numberOfTickMarks = Self.opacitySteps.count
         slider.allowsTickMarkValuesOnly = true
         slider.target = self
@@ -362,8 +362,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         settingsStore.animationDuration = Self.speedSteps[2]
         speedSlider?.integerValue = 2
 
-        settingsStore.rippleOpacity = Self.opacitySteps[4]
-        opacitySlider?.integerValue = 4
+        settingsStore.rippleOpacity = Self.opacitySteps[2]
+        opacitySlider?.integerValue = 2
 
         settingsStore.launchAtLogin = false
         loginCheckbox?.state = .off

@@ -93,9 +93,9 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(steps[2], 0.5)
     }
 
-    func testRippleOpacityDefaultsTo1() {
+    func testRippleOpacityDefaultsTo0_6() {
         let store = makeStore()
-        XCTAssertEqual(store.rippleOpacity, 1.0, accuracy: 0.001)
+        XCTAssertEqual(store.rippleOpacity, 0.6, accuracy: 0.001)
     }
 
     func testRippleOpacityPersistsValue() {
@@ -109,7 +109,7 @@ final class SettingsStoreTests: XCTestCase {
     func testOpacityStepsHasFiveLevels() {
         let steps = SettingsWindowController.opacitySteps
         XCTAssertEqual(steps.count, 5)
-        XCTAssertEqual(steps.first, 0.2)
+        XCTAssertEqual(steps.first, 0.15)
         XCTAssertEqual(steps.last, 1.0)
     }
 
