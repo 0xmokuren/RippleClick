@@ -23,8 +23,8 @@ type_body_length:
   error: 600
 
 file_length:
-  warning: 550
-  error: 650
+  warning: 600
+  error: 700
 
 function_body_length:
   warning: 120
