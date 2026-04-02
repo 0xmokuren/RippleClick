@@ -141,6 +141,59 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.rippleOpacity, 1.0, accuracy: 0.001)
     }
 
+    func testAppearanceAwareColorDefaultsToFalse() {
+        let store = makeStore()
+        XCTAssertFalse(store.appearanceAwareColor)
+    }
+
+    func testAppearanceAwareColorPersistsValue() {
+        let store = makeStore()
+        store.appearanceAwareColor = true
+        XCTAssertTrue(store.appearanceAwareColor)
+    }
+
+    func testLightModeColorDefaultsToCyan() {
+        let store = makeStore()
+        let color = store.lightModeColor.usingColorSpace(.sRGB)!
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        color.getRed(&red, green: &green, blue: &blue, alpha: nil)
+        XCTAssertEqual(red, 0, accuracy: 0.01)
+        XCTAssertEqual(green, 1, accuracy: 0.01)
+        XCTAssertEqual(blue, 1, accuracy: 0.01)
+    }
+
+    func testDarkModeColorDefaultsToCyan() {
+        let store = makeStore()
+        let color = store.darkModeColor.usingColorSpace(.sRGB)!
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        color.getRed(&red, green: &green, blue: &blue, alpha: nil)
+        XCTAssertEqual(red, 0, accuracy: 0.01)
+        XCTAssertEqual(green, 1, accuracy: 0.01)
+        XCTAssertEqual(blue, 1, accuracy: 0.01)
+    }
+
+    func testLightModeColorPersistsValue() {
+        let store = makeStore()
+        store.lightModeColor = NSColor(red: 1, green: 0, blue: 0, alpha: 1)
+        let color = store.lightModeColor.usingColorSpace(.sRGB)!
+        var red: CGFloat = 0
+        color.getRed(&red, green: nil, blue: nil, alpha: nil)
+        XCTAssertEqual(red, 1, accuracy: 0.01)
+    }
+
+    func testDarkModeColorPersistsValue() {
+        let store = makeStore()
+        store.darkModeColor = NSColor(red: 0, green: 0, blue: 1, alpha: 1)
+        let color = store.darkModeColor.usingColorSpace(.sRGB)!
+        var blue: CGFloat = 0
+        color.getRed(nil, green: nil, blue: &blue, alpha: nil)
+        XCTAssertEqual(blue, 1, accuracy: 0.01)
+    }
+
     func testSizeStepsHasFiveLevels() {
         let steps = SettingsWindowController.sizeSteps
         XCTAssertEqual(steps.count, 5)

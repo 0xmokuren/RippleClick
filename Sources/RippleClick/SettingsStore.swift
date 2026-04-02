@@ -16,17 +16,39 @@ public final class SettingsStore {
         static let animationDuration = "animationDuration"
         static let rippleOpacity = "rippleOpacity"
         static let launchAtLogin = "launchAtLogin"
+        static let appearanceAwareColor = "appearanceAwareColor"
+        static let lightColorRed = "lightColorRed"
+        static let lightColorGreen = "lightColorGreen"
+        static let lightColorBlue = "lightColorBlue"
+        static let lightColorAlpha = "lightColorAlpha"
+        static let darkColorRed = "darkColorRed"
+        static let darkColorGreen = "darkColorGreen"
+        static let darkColorBlue = "darkColorBlue"
+        static let darkColorAlpha = "darkColorAlpha"
     }
+
+    private static let defaultColor = NSColor(red: 0, green: 1, blue: 1, alpha: 1)  // Cyan
 
     public var isEnabled: Bool {
         get { defaults.object(forKey: Keys.isEnabled) as? Bool ?? true }
         set { defaults.set(newValue, forKey: Keys.isEnabled) }
     }
 
+    public var appearanceAwareColor: Bool {
+        get { defaults.bool(forKey: Keys.appearanceAwareColor) }
+        set {
+            defaults.set(newValue, forKey: Keys.appearanceAwareColor)
+            NotificationCenter.default.post(name: .rippleColorChanged, object: nil)
+        }
+    }
+
     public var rippleColor: NSColor {
         get {
+            if appearanceAwareColor {
+                return isDarkMode ? darkModeColor : lightModeColor
+            }
             guard defaults.object(forKey: Keys.rippleColorRed) != nil else {
-                return NSColor(red: 0, green: 1, blue: 1, alpha: 1)  // Cyan
+                return Self.defaultColor
             }
             return NSColor(
                 red: defaults.double(forKey: Keys.rippleColorRed),
@@ -36,18 +58,38 @@ public final class SettingsStore {
             )
         }
         set {
-            var red: CGFloat = 0
-            var green: CGFloat = 0
-            var blue: CGFloat = 0
-            var alpha: CGFloat = 0
-            let color = newValue.usingColorSpace(.sRGB) ?? newValue
-            color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
-            defaults.set(Double(red), forKey: Keys.rippleColorRed)
-            defaults.set(Double(green), forKey: Keys.rippleColorGreen)
-            defaults.set(Double(blue), forKey: Keys.rippleColorBlue)
-            defaults.set(Double(alpha), forKey: Keys.rippleColorAlpha)
+            storeColor(newValue, redKey: Keys.rippleColorRed, greenKey: Keys.rippleColorGreen,
+                        blueKey: Keys.rippleColorBlue, alphaKey: Keys.rippleColorAlpha)
             NotificationCenter.default.post(name: .rippleColorChanged, object: nil)
         }
+    }
+
+    public var lightModeColor: NSColor {
+        get { loadColor(redKey: Keys.lightColorRed, greenKey: Keys.lightColorGreen,
+                        blueKey: Keys.lightColorBlue, alphaKey: Keys.lightColorAlpha) }
+        set {
+            storeColor(newValue, redKey: Keys.lightColorRed, greenKey: Keys.lightColorGreen,
+                        blueKey: Keys.lightColorBlue, alphaKey: Keys.lightColorAlpha)
+            if appearanceAwareColor {
+                NotificationCenter.default.post(name: .rippleColorChanged, object: nil)
+            }
+        }
+    }
+
+    public var darkModeColor: NSColor {
+        get { loadColor(redKey: Keys.darkColorRed, greenKey: Keys.darkColorGreen,
+                        blueKey: Keys.darkColorBlue, alphaKey: Keys.darkColorAlpha) }
+        set {
+            storeColor(newValue, redKey: Keys.darkColorRed, greenKey: Keys.darkColorGreen,
+                        blueKey: Keys.darkColorBlue, alphaKey: Keys.darkColorAlpha)
+            if appearanceAwareColor {
+                NotificationCenter.default.post(name: .rippleColorChanged, object: nil)
+            }
+        }
+    }
+
+    public var isDarkMode: Bool {
+        NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
     }
 
     public var maxRippleSize: CGFloat {
@@ -88,6 +130,37 @@ public final class SettingsStore {
 
     init(defaults: UserDefaults) {
         self.defaults = defaults
+    }
+
+    // MARK: - Color helpers
+
+    private func loadColor(
+        redKey: String, greenKey: String, blueKey: String, alphaKey: String
+    ) -> NSColor {
+        guard defaults.object(forKey: redKey) != nil else {
+            return Self.defaultColor
+        }
+        return NSColor(
+            red: defaults.double(forKey: redKey),
+            green: defaults.double(forKey: greenKey),
+            blue: defaults.double(forKey: blueKey),
+            alpha: defaults.double(forKey: alphaKey)
+        )
+    }
+
+    private func storeColor(
+        _ color: NSColor, redKey: String, greenKey: String, blueKey: String, alphaKey: String
+    ) {
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        let srgb = color.usingColorSpace(.sRGB) ?? color
+        srgb.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        defaults.set(Double(red), forKey: redKey)
+        defaults.set(Double(green), forKey: greenKey)
+        defaults.set(Double(blue), forKey: blueKey)
+        defaults.set(Double(alpha), forKey: alphaKey)
     }
 }
 

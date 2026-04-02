@@ -21,8 +21,9 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         ("color.white", NSColor(red: 1, green: 1, blue: 1, alpha: 1)),
     ]
 
-    private static let windowWidth: CGFloat = 320
-    private static let windowHeight: CGFloat = 440
+    private static let windowWidth: CGFloat = 380
+    private static let baseHeight: CGFloat = 440
+    private static let appearanceExtraHeight: CGFloat = 100
     private static let margin: CGFloat = 20
     private static let colorButtonSize: CGFloat = 28
     private static let colorButtonSpacing: CGFloat = 8
@@ -32,8 +33,11 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private var sizeSlider: NSSlider?
     private var speedSlider: NSSlider?
     private var opacitySlider: NSSlider?
-    private var loginCheckbox: NSButton?
+    private var loginToggle: NSSwitch?
+    private var appearanceToggle: NSSwitch?
     private var colorButtons: [NSButton] = []
+    private var lightColorButtons: [NSButton] = []
+    private var darkColorButtons: [NSButton] = []
 
     init(settingsStore: SettingsStore) {
         self.settingsStore = settingsStore
@@ -47,14 +51,31 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             return
         }
 
-        let window = createWindow()
+        buildWindow()
+    }
+
+    private func buildWindow() {
+        let isAppearanceAware = settingsStore.appearanceAwareColor
+        let windowHeight = Self.baseHeight + (isAppearanceAware ? Self.appearanceExtraHeight : 0)
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: Self.windowWidth, height: windowHeight),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = localized("settings.title")
+        window.delegate = self
+        window.center()
+        window.isReleasedWhenClosed = false
+
         let contentView = NSView(
-            frame: NSRect(x: 0, y: 0, width: Self.windowWidth, height: Self.windowHeight)
+            frame: NSRect(x: 0, y: 0, width: Self.windowWidth, height: windowHeight)
         )
         window.contentView = contentView
 
-        var yOffset = Self.windowHeight - 32
-        yOffset = addColorSection(to: contentView, yOffset: yOffset)
+        var yOffset = windowHeight - 32
+        yOffset = addColorSection(to: contentView, yOffset: yOffset, appearanceAware: isAppearanceAware)
         yOffset = addSizeSection(to: contentView, yOffset: yOffset)
         yOffset = addSpeedSection(to: contentView, yOffset: yOffset)
         yOffset = addOpacitySection(to: contentView, yOffset: yOffset)
@@ -66,44 +87,134 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    // MARK: - Window creation
-
-    private func createWindow() -> NSWindow {
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: Self.windowWidth, height: Self.windowHeight),
-            styleMask: [.titled, .closable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = localized("settings.title")
-        window.delegate = self
-        window.center()
-        window.isReleasedWhenClosed = false
-        return window
+    private func rebuildWindow() {
+        let oldFrame = window?.frame
+        window?.close()
+        window = nil
+        colorButtons = []
+        lightColorButtons = []
+        darkColorButtons = []
+        buildWindow()
+        if let oldFrame = oldFrame, let window = window {
+            // Keep top-left corner fixed (grow downward)
+            let newY = oldFrame.maxY - window.frame.height
+            window.setFrameOrigin(NSPoint(x: oldFrame.origin.x, y: newY))
+        }
     }
 
     // MARK: - Section builders
 
-    private func addColorSection(to contentView: NSView, yOffset: CGFloat) -> CGFloat {
+    private func addColorSection(
+        to contentView: NSView, yOffset: CGFloat, appearanceAware: Bool
+    ) -> CGFloat {
         var currentY = yOffset
-        let label = makeSectionLabel(localized("settings.color"), origin: NSPoint(x: Self.margin, y: currentY))
+        let label = makeSectionLabel(
+            localized("settings.color"), origin: NSPoint(x: Self.margin, y: currentY))
         contentView.addSubview(label)
 
-        colorButtons = []
-        for row in 0..<2 {
-            currentY -= (Self.colorButtonSize + 4)
-            for col in 0..<6 {
-                let index = row * 6 + col
-                let preset = Self.colorPresets[index]
-                let xPos = Self.margin + CGFloat(col) * (Self.colorButtonSize + Self.colorButtonSpacing)
+        currentY -= 24
+        let toggleLabel = NSTextField(
+            frame: NSRect(x: Self.margin, y: currentY, width: 230, height: 20))
+        toggleLabel.stringValue = localized("settings.color.appearance")
+        toggleLabel.isEditable = false
+        toggleLabel.isBezeled = false
+        toggleLabel.drawsBackground = false
+        toggleLabel.font = .systemFont(ofSize: 13)
+        contentView.addSubview(toggleLabel)
 
-                let button = makeColorButton(
-                    frame: NSRect(x: xPos, y: currentY, width: Self.colorButtonSize, height: Self.colorButtonSize),
-                    preset: preset,
-                    index: index
-                )
-                colorButtons.append(button)
-                contentView.addSubview(button)
+        let toggle = NSSwitch()
+        toggle.sizeToFit()
+        toggle.frame.origin = NSPoint(x: Self.windowWidth - Self.margin - toggle.frame.width, y: currentY)
+        toggle.state = appearanceAware ? .on : .off
+        toggle.target = self
+        toggle.action = #selector(appearanceToggleChanged(_:))
+        self.appearanceToggle = toggle
+        contentView.addSubview(toggle)
+
+        if appearanceAware {
+            currentY -= 24
+            let lightLabel = makeSectionLabel(
+                localized("settings.color.light"),
+                origin: NSPoint(x: Self.margin + 8, y: currentY)
+            )
+            lightLabel.font = .systemFont(ofSize: 11)
+            contentView.addSubview(lightLabel)
+
+            lightColorButtons = []
+            for row in 0..<2 {
+                currentY -= (Self.colorButtonSize + 4)
+                for col in 0..<6 {
+                    let index = row * 6 + col
+                    let preset = Self.colorPresets[index]
+                    let xPos = Self.margin + CGFloat(col)
+                        * (Self.colorButtonSize + Self.colorButtonSpacing)
+
+                    let button = makeColorButton(
+                        frame: NSRect(
+                            x: xPos, y: currentY,
+                            width: Self.colorButtonSize, height: Self.colorButtonSize),
+                        preset: preset,
+                        index: index,
+                        action: #selector(lightColorSelected(_:)),
+                        selectedColor: settingsStore.lightModeColor
+                    )
+                    lightColorButtons.append(button)
+                    contentView.addSubview(button)
+                }
+            }
+
+            currentY -= 24
+            let darkLabel = makeSectionLabel(
+                localized("settings.color.dark"),
+                origin: NSPoint(x: Self.margin + 8, y: currentY)
+            )
+            darkLabel.font = .systemFont(ofSize: 11)
+            contentView.addSubview(darkLabel)
+
+            darkColorButtons = []
+            for row in 0..<2 {
+                currentY -= (Self.colorButtonSize + 4)
+                for col in 0..<6 {
+                    let index = row * 6 + col
+                    let preset = Self.colorPresets[index]
+                    let xPos = Self.margin + CGFloat(col)
+                        * (Self.colorButtonSize + Self.colorButtonSpacing)
+
+                    let button = makeColorButton(
+                        frame: NSRect(
+                            x: xPos, y: currentY,
+                            width: Self.colorButtonSize, height: Self.colorButtonSize),
+                        preset: preset,
+                        index: index,
+                        action: #selector(darkColorSelected(_:)),
+                        selectedColor: settingsStore.darkModeColor
+                    )
+                    darkColorButtons.append(button)
+                    contentView.addSubview(button)
+                }
+            }
+        } else {
+            colorButtons = []
+            for row in 0..<2 {
+                currentY -= (Self.colorButtonSize + 4)
+                for col in 0..<6 {
+                    let index = row * 6 + col
+                    let preset = Self.colorPresets[index]
+                    let xPos = Self.margin + CGFloat(col)
+                        * (Self.colorButtonSize + Self.colorButtonSpacing)
+
+                    let button = makeColorButton(
+                        frame: NSRect(
+                            x: xPos, y: currentY,
+                            width: Self.colorButtonSize, height: Self.colorButtonSize),
+                        preset: preset,
+                        index: index,
+                        action: #selector(colorSelected(_:)),
+                        selectedColor: settingsStore.rippleColor
+                    )
+                    colorButtons.append(button)
+                    contentView.addSubview(button)
+                }
             }
         }
         return currentY
@@ -111,11 +222,12 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     private func addSizeSection(to contentView: NSView, yOffset: CGFloat) -> CGFloat {
         var currentY = yOffset - 28
-        let title = makeSectionLabel(localized("settings.size"), origin: NSPoint(x: Self.margin, y: currentY))
+        let title = makeSectionLabel(
+            localized("settings.size"), origin: NSPoint(x: Self.margin, y: currentY))
         contentView.addSubview(title)
 
         currentY -= 28
-        let slider = NSSlider(frame: NSRect(x: Self.margin, y: currentY, width: 200, height: 24))
+        let slider = NSSlider(frame: NSRect(x: Self.margin, y: currentY, width: 260, height: 24))
         slider.minValue = 0
         slider.maxValue = Double(Self.sizeSteps.count - 1)
         slider.integerValue = nearestIndex(for: settingsStore.maxRippleSize, in: Self.sizeSteps)
@@ -128,26 +240,25 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
         currentY -= 16
         addEdgeLabels(
-            to: contentView,
-            yPosition: currentY,
+            to: contentView, yPosition: currentY,
             minText: localized("settings.size.min"),
-            maxText: localized("settings.size.max"),
-            sliderWidth: 200
+            maxText: localized("settings.size.max"), sliderWidth: 260
         )
-
         return currentY
     }
 
     private func addSpeedSection(to contentView: NSView, yOffset: CGFloat) -> CGFloat {
         var currentY = yOffset - 28
-        let title = makeSectionLabel(localized("settings.speed"), origin: NSPoint(x: Self.margin, y: currentY))
+        let title = makeSectionLabel(
+            localized("settings.speed"), origin: NSPoint(x: Self.margin, y: currentY))
         contentView.addSubview(title)
 
         currentY -= 28
-        let slider = NSSlider(frame: NSRect(x: Self.margin, y: currentY, width: 200, height: 24))
+        let slider = NSSlider(frame: NSRect(x: Self.margin, y: currentY, width: 260, height: 24))
         slider.minValue = 0
         slider.maxValue = Double(Self.speedSteps.count - 1)
-        slider.integerValue = nearestIndex(for: settingsStore.animationDuration, in: Self.speedSteps)
+        slider.integerValue = nearestIndex(
+            for: settingsStore.animationDuration, in: Self.speedSteps)
         slider.numberOfTickMarks = Self.speedSteps.count
         slider.allowsTickMarkValuesOnly = true
         slider.target = self
@@ -157,26 +268,25 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
         currentY -= 16
         addEdgeLabels(
-            to: contentView,
-            yPosition: currentY,
+            to: contentView, yPosition: currentY,
             minText: localized("settings.speed.min"),
-            maxText: localized("settings.speed.max"),
-            sliderWidth: 200
+            maxText: localized("settings.speed.max"), sliderWidth: 260
         )
-
         return currentY
     }
 
     private func addOpacitySection(to contentView: NSView, yOffset: CGFloat) -> CGFloat {
         var currentY = yOffset - 28
-        let title = makeSectionLabel(localized("settings.opacity"), origin: NSPoint(x: Self.margin, y: currentY))
+        let title = makeSectionLabel(
+            localized("settings.opacity"), origin: NSPoint(x: Self.margin, y: currentY))
         contentView.addSubview(title)
 
         currentY -= 28
-        let slider = NSSlider(frame: NSRect(x: Self.margin, y: currentY, width: 200, height: 24))
+        let slider = NSSlider(frame: NSRect(x: Self.margin, y: currentY, width: 260, height: 24))
         slider.minValue = 0
         slider.maxValue = Double(Self.opacitySteps.count - 1)
-        slider.integerValue = nearestIndex(for: settingsStore.rippleOpacity, in: Self.opacitySteps)
+        slider.integerValue = nearestIndex(
+            for: settingsStore.rippleOpacity, in: Self.opacitySteps)
         slider.numberOfTickMarks = Self.opacitySteps.count
         slider.allowsTickMarkValuesOnly = true
         slider.target = self
@@ -186,31 +296,37 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
         currentY -= 16
         addEdgeLabels(
-            to: contentView,
-            yPosition: currentY,
+            to: contentView, yPosition: currentY,
             minText: localized("settings.opacity.min"),
-            maxText: localized("settings.opacity.max"),
-            sliderWidth: 200
+            maxText: localized("settings.opacity.max"), sliderWidth: 260
         )
-
         return currentY
     }
 
     private func addGeneralSection(to contentView: NSView, yOffset: CGFloat) -> CGFloat {
         var currentY = yOffset - 28
-        let label = makeSectionLabel(localized("settings.general"), origin: NSPoint(x: Self.margin, y: currentY))
+        let label = makeSectionLabel(
+            localized("settings.general"), origin: NSPoint(x: Self.margin, y: currentY))
         contentView.addSubview(label)
 
         currentY -= 24
-        let checkbox = NSButton(
-            checkboxWithTitle: localized("settings.launchAtLogin"),
-            target: self, action: #selector(launchAtLoginChanged(_:))
-        )
-        checkbox.frame = NSRect(x: Self.margin, y: currentY, width: 200, height: 20)
-        checkbox.state = settingsStore.launchAtLogin ? .on : .off
-        self.loginCheckbox = checkbox
-        contentView.addSubview(checkbox)
+        let loginLabel = NSTextField(
+            frame: NSRect(x: Self.margin, y: currentY, width: 230, height: 20))
+        loginLabel.stringValue = localized("settings.launchAtLogin")
+        loginLabel.isEditable = false
+        loginLabel.isBezeled = false
+        loginLabel.drawsBackground = false
+        loginLabel.font = .systemFont(ofSize: 13)
+        contentView.addSubview(loginLabel)
 
+        let toggle = NSSwitch()
+        toggle.sizeToFit()
+        toggle.frame.origin = NSPoint(x: Self.windowWidth - Self.margin - toggle.frame.width, y: currentY)
+        toggle.state = settingsStore.launchAtLogin ? .on : .off
+        toggle.target = self
+        toggle.action = #selector(launchAtLoginChanged(_:))
+        self.loginToggle = toggle
+        contentView.addSubview(toggle)
         return currentY
     }
 
@@ -234,7 +350,9 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private func makeColorButton(
         frame: NSRect,
         preset: (key: String, color: NSColor),
-        index: Int
+        index: Int,
+        action: Selector,
+        selectedColor: NSColor
     ) -> NSButton {
         let button = NSButton(frame: frame)
         button.title = ""
@@ -246,19 +364,17 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         button.toolTip = localized(preset.key)
         button.tag = index
         button.target = self
-        button.action = #selector(colorSelected(_:))
-        updateColorButtonBorder(button, selected: colorsMatch(preset.color, settingsStore.rippleColor))
+        button.action = action
+        updateColorButtonBorder(button, selected: colorsMatch(preset.color, selectedColor))
         return button
     }
 
     private func addEdgeLabels(
-        to contentView: NSView,
-        yPosition: CGFloat,
-        minText: String,
-        maxText: String,
-        sliderWidth: CGFloat
+        to contentView: NSView, yPosition: CGFloat,
+        minText: String, maxText: String, sliderWidth: CGFloat
     ) {
-        let minLabel = NSTextField(frame: NSRect(x: Self.margin, y: yPosition, width: 60, height: 14))
+        let minLabel = NSTextField(
+            frame: NSRect(x: Self.margin, y: yPosition, width: 60, height: 14))
         minLabel.stringValue = minText
         minLabel.isEditable = false
         minLabel.isBezeled = false
@@ -269,7 +385,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         contentView.addSubview(minLabel)
 
         let maxLabel = NSTextField(
-            frame: NSRect(x: Self.margin + sliderWidth - 60, y: yPosition, width: 60, height: 14)
+            frame: NSRect(
+                x: Self.margin + sliderWidth - 60, y: yPosition, width: 60, height: 14)
         )
         maxLabel.stringValue = maxText
         maxLabel.isEditable = false
@@ -295,7 +412,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     }
 
     private func makeSectionLabel(_ text: String, origin: NSPoint) -> NSTextField {
-        let label = NSTextField(frame: NSRect(x: origin.x, y: origin.y, width: 280, height: 18))
+        let label = NSTextField(
+            frame: NSRect(x: origin.x, y: origin.y, width: 280, height: 18))
         label.stringValue = text
         label.isEditable = false
         label.isBezeled = false
@@ -331,43 +449,61 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         var alpha2: CGFloat = 0
         srgbA.getRed(&red1, green: &green1, blue: &blue1, alpha: &alpha1)
         srgbB.getRed(&red2, green: &green2, blue: &blue2, alpha: &alpha2)
-        return abs(red1 - red2) < 0.05 && abs(green1 - green2) < 0.05 && abs(blue1 - blue2) < 0.05
+        return abs(red1 - red2) < 0.05 && abs(green1 - green2) < 0.05
+            && abs(blue1 - blue2) < 0.05
     }
 
     // MARK: - Actions
 
+    @objc private func appearanceToggleChanged(_ sender: NSSwitch) {
+        settingsStore.appearanceAwareColor = (sender.state == .on)
+        rebuildWindow()
+    }
+
     @objc private func colorSelected(_ sender: NSButton) {
         let preset = Self.colorPresets[sender.tag]
         settingsStore.rippleColor = preset.color
-
         for button in colorButtons {
+            updateColorButtonBorder(button, selected: button.tag == sender.tag)
+        }
+    }
+
+    @objc private func lightColorSelected(_ sender: NSButton) {
+        let preset = Self.colorPresets[sender.tag]
+        settingsStore.lightModeColor = preset.color
+        for button in lightColorButtons {
+            updateColorButtonBorder(button, selected: button.tag == sender.tag)
+        }
+    }
+
+    @objc private func darkColorSelected(_ sender: NSButton) {
+        let preset = Self.colorPresets[sender.tag]
+        settingsStore.darkModeColor = preset.color
+        for button in darkColorButtons {
             updateColorButtonBorder(button, selected: button.tag == sender.tag)
         }
     }
 
     @objc private func sizeChanged(_ sender: NSSlider) {
         let index = min(sender.integerValue, Self.sizeSteps.count - 1)
-        let value = Self.sizeSteps[index]
-        settingsStore.maxRippleSize = value
+        settingsStore.maxRippleSize = Self.sizeSteps[index]
     }
 
     @objc private func speedChanged(_ sender: NSSlider) {
         let index = min(sender.integerValue, Self.speedSteps.count - 1)
-        let value = Self.speedSteps[index]
-        settingsStore.animationDuration = value
+        settingsStore.animationDuration = Self.speedSteps[index]
     }
 
     @objc private func opacityChanged(_ sender: NSSlider) {
         let index = min(sender.integerValue, Self.opacitySteps.count - 1)
-        let value = Self.opacitySteps[index]
-        settingsStore.rippleOpacity = value
+        settingsStore.rippleOpacity = Self.opacitySteps[index]
     }
 
     @objc private func resetToDefaults() {
+        settingsStore.appearanceAwareColor = false
         settingsStore.rippleColor = Self.colorPresets[0].color
-        for button in colorButtons {
-            updateColorButtonBorder(button, selected: button.tag == 0)
-        }
+        settingsStore.lightModeColor = Self.colorPresets[0].color
+        settingsStore.darkModeColor = Self.colorPresets[0].color
 
         settingsStore.maxRippleSize = Self.sizeSteps[2]
         sizeSlider?.integerValue = 2
@@ -379,10 +515,12 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         opacitySlider?.integerValue = 2
 
         settingsStore.launchAtLogin = false
-        loginCheckbox?.state = .off
+        loginToggle?.state = .off
+
+        rebuildWindow()
     }
 
-    @objc private func launchAtLoginChanged(_ sender: NSButton) {
+    @objc private func launchAtLoginChanged(_ sender: NSSwitch) {
         settingsStore.launchAtLogin = (sender.state == .on)
     }
 

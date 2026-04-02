@@ -3,6 +3,7 @@ import AppKit
 public final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusBarController: StatusBarController?
     private var clickMonitor: ClickMonitor?
+    private var appearanceObservation: NSKeyValueObservation?
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -14,6 +15,14 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
         statusBarController?.onToggle = { [weak self] enabled in
             self?.clickMonitor?.isEnabled = enabled
+        }
+
+        appearanceObservation = NSApp.observe(\.effectiveAppearance) { _, _ in
+            DispatchQueue.main.async {
+                if settingsStore.appearanceAwareColor {
+                    NotificationCenter.default.post(name: .rippleColorChanged, object: nil)
+                }
+            }
         }
     }
 }
