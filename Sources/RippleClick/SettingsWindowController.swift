@@ -146,8 +146,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
                 for col in 0..<6 {
                     let index = row * 6 + col
                     let preset = Self.colorPresets[index]
-                    let xPos = Self.margin + CGFloat(col)
-                        * (Self.colorButtonSize + Self.colorButtonSpacing)
+                    let xPos =
+                        Self.margin + CGFloat(col) * (Self.colorButtonSize + Self.colorButtonSpacing)
 
                     let button = makeColorButton(
                         frame: NSRect(
@@ -177,8 +177,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
                 for col in 0..<6 {
                     let index = row * 6 + col
                     let preset = Self.colorPresets[index]
-                    let xPos = Self.margin + CGFloat(col)
-                        * (Self.colorButtonSize + Self.colorButtonSpacing)
+                    let xPos =
+                        Self.margin + CGFloat(col) * (Self.colorButtonSize + Self.colorButtonSpacing)
 
                     let button = makeColorButton(
                         frame: NSRect(
@@ -200,8 +200,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
                 for col in 0..<6 {
                     let index = row * 6 + col
                     let preset = Self.colorPresets[index]
-                    let xPos = Self.margin + CGFloat(col)
-                        * (Self.colorButtonSize + Self.colorButtonSpacing)
+                    let xPos =
+                        Self.margin + CGFloat(col) * (Self.colorButtonSize + Self.colorButtonSpacing)
 
                     let button = makeColorButton(
                         frame: NSRect(

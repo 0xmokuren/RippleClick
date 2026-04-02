@@ -58,18 +58,23 @@ public final class SettingsStore {
             )
         }
         set {
-            storeColor(newValue, redKey: Keys.rippleColorRed, greenKey: Keys.rippleColorGreen,
-                        blueKey: Keys.rippleColorBlue, alphaKey: Keys.rippleColorAlpha)
+            storeColor(
+                newValue, redKey: Keys.rippleColorRed, greenKey: Keys.rippleColorGreen,
+                blueKey: Keys.rippleColorBlue, alphaKey: Keys.rippleColorAlpha)
             NotificationCenter.default.post(name: .rippleColorChanged, object: nil)
         }
     }
 
     public var lightModeColor: NSColor {
-        get { loadColor(redKey: Keys.lightColorRed, greenKey: Keys.lightColorGreen,
-                        blueKey: Keys.lightColorBlue, alphaKey: Keys.lightColorAlpha) }
+        get {
+            loadColor(
+                redKey: Keys.lightColorRed, greenKey: Keys.lightColorGreen,
+                blueKey: Keys.lightColorBlue, alphaKey: Keys.lightColorAlpha)
+        }
         set {
-            storeColor(newValue, redKey: Keys.lightColorRed, greenKey: Keys.lightColorGreen,
-                        blueKey: Keys.lightColorBlue, alphaKey: Keys.lightColorAlpha)
+            storeColor(
+                newValue, redKey: Keys.lightColorRed, greenKey: Keys.lightColorGreen,
+                blueKey: Keys.lightColorBlue, alphaKey: Keys.lightColorAlpha)
             if appearanceAwareColor {
                 NotificationCenter.default.post(name: .rippleColorChanged, object: nil)
             }
@@ -77,11 +82,15 @@ public final class SettingsStore {
     }
 
     public var darkModeColor: NSColor {
-        get { loadColor(redKey: Keys.darkColorRed, greenKey: Keys.darkColorGreen,
-                        blueKey: Keys.darkColorBlue, alphaKey: Keys.darkColorAlpha) }
+        get {
+            loadColor(
+                redKey: Keys.darkColorRed, greenKey: Keys.darkColorGreen,
+                blueKey: Keys.darkColorBlue, alphaKey: Keys.darkColorAlpha)
+        }
         set {
-            storeColor(newValue, redKey: Keys.darkColorRed, greenKey: Keys.darkColorGreen,
-                        blueKey: Keys.darkColorBlue, alphaKey: Keys.darkColorAlpha)
+            storeColor(
+                newValue, redKey: Keys.darkColorRed, greenKey: Keys.darkColorGreen,
+                blueKey: Keys.darkColorBlue, alphaKey: Keys.darkColorAlpha)
             if appearanceAwareColor {
                 NotificationCenter.default.post(name: .rippleColorChanged, object: nil)
             }
