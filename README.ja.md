@@ -4,6 +4,8 @@
 
 macOSで左クリック時にマウスポインタの位置に波紋（リップル）エフェクトを表示するメニューバー常駐型ユーティリティアプリ。
 
+![RippleClick Demo](ripple-click-demo.gif)
+
 ## インストール
 
 ### Homebrew（推奨）

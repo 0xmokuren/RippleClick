@@ -4,6 +4,8 @@ English | [日本語](README.ja.md) | [简体中文](README.zh-Hans.md) | [한�
 
 A macOS menu bar utility that displays a ripple effect at the mouse pointer position on left click.
 
+![RippleClick Demo](ripple-click-demo.gif)
+
 ## Install
 
 ### Homebrew (Recommended)

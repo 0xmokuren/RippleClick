@@ -4,6 +4,8 @@
 
 macOS에서 마우스 왼쪽 클릭 시 포인터 위치에 파문(리플) 이펙트를 표시하는 메뉴 바 상주형 유틸리티 앱.
 
+![RippleClick Demo](ripple-click-demo.gif)
+
 ## 설치
 
 ### Homebrew (권장)

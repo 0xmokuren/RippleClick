@@ -4,6 +4,8 @@
 
 一款 macOS 菜单栏常驻工具，在鼠标左键点击时于指针位置显示波纹特效。
 
+![RippleClick Demo](ripple-click-demo.gif)
+
 ## 安装
 
 ### Homebrew（推荐）
