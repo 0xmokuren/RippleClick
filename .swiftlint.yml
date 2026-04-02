@@ -19,5 +19,13 @@ line_length:
   error: 150
 
 type_body_length:
-  warning: 350
-  error: 500
+  warning: 500
+  error: 600
+
+file_length:
+  warning: 550
+  error: 650
+
+function_body_length:
+  warning: 120
+  error: 150
