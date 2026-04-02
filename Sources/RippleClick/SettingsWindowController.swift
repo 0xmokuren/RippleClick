@@ -109,7 +109,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     ) -> CGFloat {
         var currentY = yOffset
         let label = makeSectionLabel(
-            localized("settings.color"), origin: NSPoint(x: Self.margin, y: currentY))
+            localized("settings.color"), origin: NSPoint(x: Self.margin, y: currentY),
+            symbolName: "paintpalette")
         contentView.addSubview(label)
 
         currentY -= 24
@@ -123,6 +124,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         contentView.addSubview(toggleLabel)
 
         let toggle = NSSwitch()
+        toggle.controlSize = .small
         toggle.sizeToFit()
         toggle.frame.origin = NSPoint(x: Self.windowWidth - Self.margin - toggle.frame.width, y: currentY)
         toggle.state = appearanceAware ? .on : .off
@@ -133,11 +135,9 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
         if appearanceAware {
             currentY -= 24
-            let lightLabel = makeSectionLabel(
+            let lightLabel = makeSubLabel(
                 localized("settings.color.light"),
-                origin: NSPoint(x: Self.margin + 8, y: currentY)
-            )
-            lightLabel.font = .systemFont(ofSize: 11)
+                origin: NSPoint(x: Self.margin + 8, y: currentY))
             contentView.addSubview(lightLabel)
 
             lightColorButtons = []
@@ -164,11 +164,9 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             }
 
             currentY -= 24
-            let darkLabel = makeSectionLabel(
+            let darkLabel = makeSubLabel(
                 localized("settings.color.dark"),
-                origin: NSPoint(x: Self.margin + 8, y: currentY)
-            )
-            darkLabel.font = .systemFont(ofSize: 11)
+                origin: NSPoint(x: Self.margin + 8, y: currentY))
             contentView.addSubview(darkLabel)
 
             darkColorButtons = []
@@ -223,7 +221,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private func addSizeSection(to contentView: NSView, yOffset: CGFloat) -> CGFloat {
         var currentY = yOffset - 28
         let title = makeSectionLabel(
-            localized("settings.size"), origin: NSPoint(x: Self.margin, y: currentY))
+            localized("settings.size"), origin: NSPoint(x: Self.margin, y: currentY),
+            symbolName: "arrow.up.left.and.arrow.down.right")
         contentView.addSubview(title)
 
         currentY -= 28
@@ -250,7 +249,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private func addSpeedSection(to contentView: NSView, yOffset: CGFloat) -> CGFloat {
         var currentY = yOffset - 28
         let title = makeSectionLabel(
-            localized("settings.speed"), origin: NSPoint(x: Self.margin, y: currentY))
+            localized("settings.speed"), origin: NSPoint(x: Self.margin, y: currentY),
+            symbolName: "hare")
         contentView.addSubview(title)
 
         currentY -= 28
@@ -278,7 +278,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private func addOpacitySection(to contentView: NSView, yOffset: CGFloat) -> CGFloat {
         var currentY = yOffset - 28
         let title = makeSectionLabel(
-            localized("settings.opacity"), origin: NSPoint(x: Self.margin, y: currentY))
+            localized("settings.opacity"), origin: NSPoint(x: Self.margin, y: currentY),
+            symbolName: "circle.lefthalf.filled")
         contentView.addSubview(title)
 
         currentY -= 28
@@ -306,7 +307,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private func addGeneralSection(to contentView: NSView, yOffset: CGFloat) -> CGFloat {
         var currentY = yOffset - 28
         let label = makeSectionLabel(
-            localized("settings.general"), origin: NSPoint(x: Self.margin, y: currentY))
+            localized("settings.general"), origin: NSPoint(x: Self.margin, y: currentY),
+            symbolName: "gearshape")
         contentView.addSubview(label)
 
         currentY -= 24
@@ -320,6 +322,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         contentView.addSubview(loginLabel)
 
         let toggle = NSSwitch()
+        toggle.controlSize = .small
         toggle.sizeToFit()
         toggle.frame.origin = NSPoint(x: Self.windowWidth - Self.margin - toggle.frame.width, y: currentY)
         toggle.state = settingsStore.launchAtLogin ? .on : .off
@@ -411,14 +414,43 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         return bestIndex
     }
 
-    private func makeSectionLabel(_ text: String, origin: NSPoint) -> NSTextField {
+    private func makeSectionLabel(
+        _ text: String, origin: NSPoint, symbolName: String? = nil
+    ) -> NSView {
+        let container = NSView(frame: NSRect(x: origin.x, y: origin.y, width: 280, height: 18))
+
+        var textX: CGFloat = 0
+        if let symbolName = symbolName,
+            let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: text)
+        {
+            let imageView = NSImageView(frame: NSRect(x: 0, y: 0, width: 16, height: 16))
+            imageView.image = image
+            imageView.contentTintColor = .secondaryLabelColor
+            container.addSubview(imageView)
+            textX = 20
+        }
+
         let label = NSTextField(
-            frame: NSRect(x: origin.x, y: origin.y, width: 280, height: 18))
+            frame: NSRect(x: textX, y: 0, width: 280 - textX, height: 18))
         label.stringValue = text
         label.isEditable = false
         label.isBezeled = false
         label.drawsBackground = false
         label.font = .systemFont(ofSize: 12, weight: .semibold)
+        label.textColor = .secondaryLabelColor
+        container.addSubview(label)
+
+        return container
+    }
+
+    private func makeSubLabel(_ text: String, origin: NSPoint) -> NSTextField {
+        let label = NSTextField(
+            frame: NSRect(x: origin.x, y: origin.y, width: 280, height: 16))
+        label.stringValue = text
+        label.isEditable = false
+        label.isBezeled = false
+        label.drawsBackground = false
+        label.font = .systemFont(ofSize: 11)
         label.textColor = .secondaryLabelColor
         return label
     }
