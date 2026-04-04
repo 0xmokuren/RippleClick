@@ -25,6 +25,32 @@ public final class SettingsStore {
         static let darkColorGreen = "darkColorGreen"
         static let darkColorBlue = "darkColorBlue"
         static let darkColorAlpha = "darkColorAlpha"
+        static let rightClickEnabled = "rightClickEnabled"
+        static let doubleClickEnabled = "doubleClickEnabled"
+        static let rightClickColorRed = "rightClickColorRed"
+        static let rightClickColorGreen = "rightClickColorGreen"
+        static let rightClickColorBlue = "rightClickColorBlue"
+        static let rightClickColorAlpha = "rightClickColorAlpha"
+        static let doubleClickColorRed = "doubleClickColorRed"
+        static let doubleClickColorGreen = "doubleClickColorGreen"
+        static let doubleClickColorBlue = "doubleClickColorBlue"
+        static let doubleClickColorAlpha = "doubleClickColorAlpha"
+        static let rightClickLightColorRed = "rightClickLightColorRed"
+        static let rightClickLightColorGreen = "rightClickLightColorGreen"
+        static let rightClickLightColorBlue = "rightClickLightColorBlue"
+        static let rightClickLightColorAlpha = "rightClickLightColorAlpha"
+        static let rightClickDarkColorRed = "rightClickDarkColorRed"
+        static let rightClickDarkColorGreen = "rightClickDarkColorGreen"
+        static let rightClickDarkColorBlue = "rightClickDarkColorBlue"
+        static let rightClickDarkColorAlpha = "rightClickDarkColorAlpha"
+        static let doubleClickLightColorRed = "doubleClickLightColorRed"
+        static let doubleClickLightColorGreen = "doubleClickLightColorGreen"
+        static let doubleClickLightColorBlue = "doubleClickLightColorBlue"
+        static let doubleClickLightColorAlpha = "doubleClickLightColorAlpha"
+        static let doubleClickDarkColorRed = "doubleClickDarkColorRed"
+        static let doubleClickDarkColorGreen = "doubleClickDarkColorGreen"
+        static let doubleClickDarkColorBlue = "doubleClickDarkColorBlue"
+        static let doubleClickDarkColorAlpha = "doubleClickDarkColorAlpha"
     }
 
     private static let defaultColor = NSColor(red: 0, green: 1, blue: 1, alpha: 1)  // Cyan
@@ -130,6 +156,132 @@ public final class SettingsStore {
         set {
             let success = LoginItemManager.setEnabled(newValue)
             defaults.set(success ? newValue : LoginItemManager.isEnabled, forKey: Keys.launchAtLogin)
+        }
+    }
+
+    // MARK: - Right-click settings
+
+    public var rightClickEnabled: Bool {
+        get { defaults.object(forKey: Keys.rightClickEnabled) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: Keys.rightClickEnabled) }
+    }
+
+    public var rightClickColor: NSColor {
+        get {
+            if appearanceAwareColor {
+                return isDarkMode ? rightClickDarkColor : rightClickLightColor
+            }
+            return loadColor(
+                redKey: Keys.rightClickColorRed, greenKey: Keys.rightClickColorGreen,
+                blueKey: Keys.rightClickColorBlue, alphaKey: Keys.rightClickColorAlpha)
+        }
+        set {
+            storeColor(
+                newValue, redKey: Keys.rightClickColorRed, greenKey: Keys.rightClickColorGreen,
+                blueKey: Keys.rightClickColorBlue, alphaKey: Keys.rightClickColorAlpha)
+            NotificationCenter.default.post(name: .rippleColorChanged, object: nil)
+        }
+    }
+
+    public var rightClickLightColor: NSColor {
+        get {
+            loadColor(
+                redKey: Keys.rightClickLightColorRed, greenKey: Keys.rightClickLightColorGreen,
+                blueKey: Keys.rightClickLightColorBlue, alphaKey: Keys.rightClickLightColorAlpha)
+        }
+        set {
+            storeColor(
+                newValue, redKey: Keys.rightClickLightColorRed,
+                greenKey: Keys.rightClickLightColorGreen,
+                blueKey: Keys.rightClickLightColorBlue, alphaKey: Keys.rightClickLightColorAlpha)
+            if appearanceAwareColor {
+                NotificationCenter.default.post(name: .rippleColorChanged, object: nil)
+            }
+        }
+    }
+
+    public var rightClickDarkColor: NSColor {
+        get {
+            loadColor(
+                redKey: Keys.rightClickDarkColorRed, greenKey: Keys.rightClickDarkColorGreen,
+                blueKey: Keys.rightClickDarkColorBlue, alphaKey: Keys.rightClickDarkColorAlpha)
+        }
+        set {
+            storeColor(
+                newValue, redKey: Keys.rightClickDarkColorRed,
+                greenKey: Keys.rightClickDarkColorGreen,
+                blueKey: Keys.rightClickDarkColorBlue, alphaKey: Keys.rightClickDarkColorAlpha)
+            if appearanceAwareColor {
+                NotificationCenter.default.post(name: .rippleColorChanged, object: nil)
+            }
+        }
+    }
+
+    // MARK: - Double-click settings
+
+    public var doubleClickEnabled: Bool {
+        get { defaults.object(forKey: Keys.doubleClickEnabled) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: Keys.doubleClickEnabled) }
+    }
+
+    public var doubleClickColor: NSColor {
+        get {
+            if appearanceAwareColor {
+                return isDarkMode ? doubleClickDarkColor : doubleClickLightColor
+            }
+            return loadColor(
+                redKey: Keys.doubleClickColorRed, greenKey: Keys.doubleClickColorGreen,
+                blueKey: Keys.doubleClickColorBlue, alphaKey: Keys.doubleClickColorAlpha)
+        }
+        set {
+            storeColor(
+                newValue, redKey: Keys.doubleClickColorRed, greenKey: Keys.doubleClickColorGreen,
+                blueKey: Keys.doubleClickColorBlue, alphaKey: Keys.doubleClickColorAlpha)
+            NotificationCenter.default.post(name: .rippleColorChanged, object: nil)
+        }
+    }
+
+    public var doubleClickLightColor: NSColor {
+        get {
+            loadColor(
+                redKey: Keys.doubleClickLightColorRed, greenKey: Keys.doubleClickLightColorGreen,
+                blueKey: Keys.doubleClickLightColorBlue, alphaKey: Keys.doubleClickLightColorAlpha)
+        }
+        set {
+            storeColor(
+                newValue, redKey: Keys.doubleClickLightColorRed,
+                greenKey: Keys.doubleClickLightColorGreen,
+                blueKey: Keys.doubleClickLightColorBlue, alphaKey: Keys.doubleClickLightColorAlpha)
+            if appearanceAwareColor {
+                NotificationCenter.default.post(name: .rippleColorChanged, object: nil)
+            }
+        }
+    }
+
+    public var doubleClickDarkColor: NSColor {
+        get {
+            loadColor(
+                redKey: Keys.doubleClickDarkColorRed, greenKey: Keys.doubleClickDarkColorGreen,
+                blueKey: Keys.doubleClickDarkColorBlue, alphaKey: Keys.doubleClickDarkColorAlpha)
+        }
+        set {
+            storeColor(
+                newValue, redKey: Keys.doubleClickDarkColorRed,
+                greenKey: Keys.doubleClickDarkColorGreen,
+                blueKey: Keys.doubleClickDarkColorBlue, alphaKey: Keys.doubleClickDarkColorAlpha)
+            if appearanceAwareColor {
+                NotificationCenter.default.post(name: .rippleColorChanged, object: nil)
+            }
+        }
+    }
+
+    // MARK: - Click type helpers
+
+    public func rippleColor(for clickType: ClickType) -> NSColor {
+        switch clickType {
+        case .leftClick: return rippleColor
+        case .rightClick: return rightClickColor
+        case .doubleClick: return doubleClickColor
         }
     }
 

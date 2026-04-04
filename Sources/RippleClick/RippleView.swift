@@ -10,27 +10,38 @@ final class RippleView: NSView {
     private var maxSize: CGFloat
     private var animationDuration: CFTimeInterval
     private var rippleOpacity: CGFloat
+    private var ringCount: Int
+    private var strokeMultiplier: CGFloat
 
     init(
         frame: NSRect,
         color: NSColor,
         maxSize: CGFloat,
         duration: CFTimeInterval = 0.5,
-        opacity: CGFloat = 1.0
+        opacity: CGFloat = 1.0,
+        ringCount: Int = 1,
+        strokeMultiplier: CGFloat = 1.0
     ) {
         self.rippleColor = color
         self.maxSize = maxSize
         self.animationDuration = duration
         self.rippleOpacity = opacity
+        self.ringCount = ringCount
+        self.strokeMultiplier = strokeMultiplier
         super.init(frame: frame)
         wantsLayer = true
     }
 
-    func reset(color: NSColor, maxSize: CGFloat, duration: CFTimeInterval, opacity: CGFloat) {
+    func reset(
+        color: NSColor, maxSize: CGFloat, duration: CFTimeInterval, opacity: CGFloat,
+        ringCount: Int = 1, strokeMultiplier: CGFloat = 1.0
+    ) {
         self.rippleColor = color
         self.maxSize = maxSize
         self.animationDuration = duration
         self.rippleOpacity = opacity
+        self.ringCount = ringCount
+        self.strokeMultiplier = strokeMultiplier
         if let sublayers = layer?.sublayers {
             for sublayer in sublayers {
                 sublayer.removeFromSuperlayer()
@@ -48,50 +59,59 @@ final class RippleView: NSView {
         guard let layer = self.layer else { return }
 
         let center = CGPoint(x: bounds.midX, y: bounds.midY)
-        let finalRadius: CGFloat = maxSize / 2
 
-        let initialPath = CGPath(
-            ellipseIn: CGRect(
-                x: center.x - Self.initialRadius,
-                y: center.y - Self.initialRadius,
-                width: Self.initialRadius * 2,
-                height: Self.initialRadius * 2
-            ),
-            transform: nil
-        )
-        let finalPath = CGPath(
-            ellipseIn: CGRect(
-                x: center.x - finalRadius,
-                y: center.y - finalRadius,
-                width: finalRadius * 2,
-                height: finalRadius * 2
-            ),
-            transform: nil
-        )
+        for ringIndex in 0..<ringCount {
+            let ringFraction: CGFloat = (ringCount > 1 && ringIndex == 0) ? 0.6 : 1.0
+            let ringOpacityScale: CGFloat = (ringCount > 1 && ringIndex == 0) ? 0.7 : 1.0
+            let finalRadius: CGFloat = (maxSize / 2) * ringFraction
 
-        let circleLayer = CAShapeLayer()
-        circleLayer.path = initialPath
-        circleLayer.fillColor = rippleColor.withAlphaComponent(Self.fillOpacity * rippleOpacity).cgColor
-        circleLayer.strokeColor = rippleColor.withAlphaComponent(rippleOpacity).cgColor
-        circleLayer.lineWidth = Self.strokeWidth
-        circleLayer.frame = bounds
-        layer.addSublayer(circleLayer)
+            let initialPath = CGPath(
+                ellipseIn: CGRect(
+                    x: center.x - Self.initialRadius,
+                    y: center.y - Self.initialRadius,
+                    width: Self.initialRadius * 2,
+                    height: Self.initialRadius * 2
+                ),
+                transform: nil
+            )
+            let finalPath = CGPath(
+                ellipseIn: CGRect(
+                    x: center.x - finalRadius,
+                    y: center.y - finalRadius,
+                    width: finalRadius * 2,
+                    height: finalRadius * 2
+                ),
+                transform: nil
+            )
 
-        let pathAnimation = CABasicAnimation(keyPath: "path")
-        pathAnimation.fromValue = initialPath
-        pathAnimation.toValue = finalPath
+            let circleLayer = CAShapeLayer()
+            circleLayer.path = initialPath
+            circleLayer.fillColor = rippleColor.withAlphaComponent(
+                Self.fillOpacity * rippleOpacity * ringOpacityScale
+            ).cgColor
+            circleLayer.strokeColor = rippleColor.withAlphaComponent(
+                rippleOpacity * ringOpacityScale
+            ).cgColor
+            circleLayer.lineWidth = Self.strokeWidth * strokeMultiplier
+            circleLayer.frame = bounds
+            layer.addSublayer(circleLayer)
 
-        let opacityAnimation = CABasicAnimation(keyPath: "opacity")
-        opacityAnimation.fromValue = 1.0
-        opacityAnimation.toValue = 0.0
+            let pathAnimation = CABasicAnimation(keyPath: "path")
+            pathAnimation.fromValue = initialPath
+            pathAnimation.toValue = finalPath
 
-        let group = CAAnimationGroup()
-        group.animations = [pathAnimation, opacityAnimation]
-        group.duration = animationDuration
-        group.timingFunction = CAMediaTimingFunction(name: .easeOut)
-        group.fillMode = .forwards
-        group.isRemovedOnCompletion = false
+            let opacityAnimation = CABasicAnimation(keyPath: "opacity")
+            opacityAnimation.fromValue = 1.0
+            opacityAnimation.toValue = 0.0
 
-        circleLayer.add(group, forKey: "ripple")
+            let group = CAAnimationGroup()
+            group.animations = [pathAnimation, opacityAnimation]
+            group.duration = animationDuration
+            group.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            group.fillMode = .forwards
+            group.isRemovedOnCompletion = false
+
+            circleLayer.add(group, forKey: "ripple\(ringIndex)")
+        }
     }
 }

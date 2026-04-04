@@ -20,7 +20,9 @@ final class ClickMonitor {
     func start() {
         requestAccessibilityIfNeeded()
 
-        monitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+        monitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { [weak self] event in
             DispatchQueue.main.async {
                 self?.handleClick(event)
             }
@@ -37,7 +39,16 @@ final class ClickMonitor {
     private func handleClick(_ event: NSEvent) {
         guard settingsStore.isEnabled else { return }
         let location = NSEvent.mouseLocation
-        rippleWindowController.showRipple(at: location)
+
+        if event.type == .rightMouseDown {
+            guard settingsStore.rightClickEnabled else { return }
+            rippleWindowController.showRipple(at: location, clickType: .rightClick)
+        } else if event.clickCount >= 2 {
+            guard settingsStore.doubleClickEnabled else { return }
+            rippleWindowController.showRipple(at: location, clickType: .doubleClick)
+        } else {
+            rippleWindowController.showRipple(at: location, clickType: .leftClick)
+        }
     }
 
     private func requestAccessibilityIfNeeded() {

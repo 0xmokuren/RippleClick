@@ -201,4 +201,96 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(steps.last, 200)
         XCTAssertEqual(steps[2], 100)
     }
+
+    // MARK: - Right-click settings
+
+    func testRightClickEnabledDefaultsToTrue() {
+        let store = makeStore()
+        XCTAssertTrue(store.rightClickEnabled)
+    }
+
+    func testRightClickEnabledPersistsValue() {
+        let store = makeStore()
+        store.rightClickEnabled = false
+        XCTAssertFalse(store.rightClickEnabled)
+    }
+
+    func testRightClickColorDefaultsToCyan() {
+        let store = makeStore()
+        let color = store.rightClickColor.usingColorSpace(.sRGB)!
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        color.getRed(&red, green: &green, blue: &blue, alpha: nil)
+        XCTAssertEqual(red, 0, accuracy: 0.01)
+        XCTAssertEqual(green, 1, accuracy: 0.01)
+        XCTAssertEqual(blue, 1, accuracy: 0.01)
+    }
+
+    func testRightClickColorPersistsValue() {
+        let store = makeStore()
+        store.rightClickColor = NSColor(red: 1, green: 0, blue: 0, alpha: 1)
+        let color = store.rightClickColor.usingColorSpace(.sRGB)!
+        var red: CGFloat = 0
+        color.getRed(&red, green: nil, blue: nil, alpha: nil)
+        XCTAssertEqual(red, 1, accuracy: 0.01)
+    }
+
+    // MARK: - Double-click settings
+
+    func testDoubleClickEnabledDefaultsToTrue() {
+        let store = makeStore()
+        XCTAssertTrue(store.doubleClickEnabled)
+    }
+
+    func testDoubleClickEnabledPersistsValue() {
+        let store = makeStore()
+        store.doubleClickEnabled = false
+        XCTAssertFalse(store.doubleClickEnabled)
+    }
+
+    func testDoubleClickColorDefaultsToCyan() {
+        let store = makeStore()
+        let color = store.doubleClickColor.usingColorSpace(.sRGB)!
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        color.getRed(&red, green: &green, blue: &blue, alpha: nil)
+        XCTAssertEqual(red, 0, accuracy: 0.01)
+        XCTAssertEqual(green, 1, accuracy: 0.01)
+        XCTAssertEqual(blue, 1, accuracy: 0.01)
+    }
+
+    func testDoubleClickColorPersistsValue() {
+        let store = makeStore()
+        store.doubleClickColor = NSColor(red: 0, green: 0, blue: 1, alpha: 1)
+        let color = store.doubleClickColor.usingColorSpace(.sRGB)!
+        var blue: CGFloat = 0
+        color.getRed(nil, green: nil, blue: &blue, alpha: nil)
+        XCTAssertEqual(blue, 1, accuracy: 0.01)
+    }
+
+    // MARK: - rippleColor(for:)
+
+    func testRippleColorForClickTypeReturnsCorrectColor() {
+        let store = makeStore()
+        store.rippleColor = NSColor(red: 1, green: 0, blue: 0, alpha: 1)
+        store.rightClickColor = NSColor(red: 0, green: 1, blue: 0, alpha: 1)
+        store.doubleClickColor = NSColor(red: 0, green: 0, blue: 1, alpha: 1)
+
+        let leftColor = store.rippleColor(for: .leftClick).usingColorSpace(.sRGB)!
+        var leftRed: CGFloat = 0
+        leftColor.getRed(&leftRed, green: nil, blue: nil, alpha: nil)
+        XCTAssertEqual(leftRed, 1, accuracy: 0.01)
+
+        let rightColor = store.rippleColor(for: .rightClick).usingColorSpace(.sRGB)!
+        var rightGreen: CGFloat = 0
+        rightColor.getRed(nil, green: &rightGreen, blue: nil, alpha: nil)
+        XCTAssertEqual(rightGreen, 1, accuracy: 0.01)
+
+        let doubleColor = store.rippleColor(for: .doubleClick).usingColorSpace(.sRGB)!
+        var doubleBlue: CGFloat = 0
+        doubleColor.getRed(nil, green: nil, blue: &doubleBlue, alpha: nil)
+        XCTAssertEqual(doubleBlue, 1, accuracy: 0.01)
+    }
 }

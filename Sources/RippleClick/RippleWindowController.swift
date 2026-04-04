@@ -12,13 +12,14 @@ final class RippleWindowController {
         self.settingsStore = settingsStore
     }
 
-    func showRipple(at screenPoint: NSPoint) {
+    func showRipple(at screenPoint: NSPoint, clickType: ClickType = .leftClick) {
         if activeWindows.count >= Self.maxConcurrentWindows {
             let oldest = activeWindows.removeFirst()
             recycleWindow(oldest)
         }
 
-        let size = max(10, min(settingsStore.maxRippleSize, 500))
+        let sizeMultiplier: CGFloat = (clickType == .doubleClick) ? 1.2 : 1.0
+        let size = max(10, min(settingsStore.maxRippleSize * sizeMultiplier, 600))
         let windowRect = NSRect(
             x: screenPoint.x - size / 2,
             y: screenPoint.y - size / 2,
@@ -26,9 +27,15 @@ final class RippleWindowController {
             height: size
         )
 
+        let color = settingsStore.rippleColor(for: clickType)
+        let ringCount: Int = (clickType == .rightClick) ? 2 : 1
+        let strokeMultiplier: CGFloat = (clickType == .doubleClick) ? 2.0 : 1.0
+
         let duration = settingsStore.animationDuration
         let opacity = settingsStore.rippleOpacity
-        let window = acquireWindow(frame: windowRect, size: size, duration: duration, opacity: opacity)
+        let window = acquireWindow(
+            frame: windowRect, size: size, duration: duration, opacity: opacity,
+            color: color, ringCount: ringCount, strokeMultiplier: strokeMultiplier)
         activeWindows.append(window)
 
         window.orderFrontRegardless()
@@ -45,15 +52,19 @@ final class RippleWindowController {
         frame: NSRect,
         size: CGFloat,
         duration: CFTimeInterval,
-        opacity: CGFloat
+        opacity: CGFloat,
+        color: NSColor,
+        ringCount: Int = 1,
+        strokeMultiplier: CGFloat = 1.0
     ) -> NSWindow {
         if let window = windowPool.popLast() {
             window.setFrame(frame, display: false)
             if let rippleView = window.contentView as? RippleView {
                 rippleView.frame = NSRect(x: 0, y: 0, width: size, height: size)
                 rippleView.reset(
-                    color: settingsStore.rippleColor, maxSize: size,
-                    duration: duration, opacity: opacity
+                    color: color, maxSize: size,
+                    duration: duration, opacity: opacity,
+                    ringCount: ringCount, strokeMultiplier: strokeMultiplier
                 )
             }
             return window
@@ -74,10 +85,12 @@ final class RippleWindowController {
 
         let rippleView = RippleView(
             frame: NSRect(x: 0, y: 0, width: size, height: size),
-            color: settingsStore.rippleColor,
+            color: color,
             maxSize: size,
             duration: duration,
-            opacity: opacity
+            opacity: opacity,
+            ringCount: ringCount,
+            strokeMultiplier: strokeMultiplier
         )
         window.contentView = rippleView
 

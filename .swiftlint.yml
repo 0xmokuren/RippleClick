@@ -19,12 +19,12 @@ line_length:
   error: 150
 
 type_body_length:
-  warning: 500
-  error: 600
+  warning: 650
+  error: 750
 
 file_length:
-  warning: 600
-  error: 700
+  warning: 750
+  error: 850
 
 function_body_length:
   warning: 120

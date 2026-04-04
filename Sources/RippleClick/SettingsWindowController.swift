@@ -22,8 +22,9 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     ]
 
     private static let windowWidth: CGFloat = 380
-    private static let baseHeight: CGFloat = 440
+    private static let baseHeight: CGFloat = 470
     private static let appearanceExtraHeight: CGFloat = 100
+    private static let clickTypeToggleHeight: CGFloat = 28
     private static let margin: CGFloat = 20
     private static let colorButtonSize: CGFloat = 28
     private static let colorButtonSpacing: CGFloat = 8
@@ -38,6 +39,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private var colorButtons: [NSButton] = []
     private var lightColorButtons: [NSButton] = []
     private var darkColorButtons: [NSButton] = []
+    private var selectedClickType: ClickType = .leftClick
+    private var clickTypeEnabledToggle: NSSwitch?
 
     init(settingsStore: SettingsStore) {
         self.settingsStore = settingsStore
@@ -56,7 +59,10 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     private func buildWindow() {
         let isAppearanceAware = settingsStore.appearanceAwareColor
-        let windowHeight = Self.baseHeight + (isAppearanceAware ? Self.appearanceExtraHeight : 0)
+        let showClickTypeToggle = (selectedClickType != .leftClick)
+        let windowHeight =
+            Self.baseHeight + (isAppearanceAware ? Self.appearanceExtraHeight : 0)
+            + (showClickTypeToggle ? Self.clickTypeToggleHeight : 0)
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: Self.windowWidth, height: windowHeight),
@@ -94,6 +100,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         colorButtons = []
         lightColorButtons = []
         darkColorButtons = []
+        clickTypeEnabledToggle = nil
         buildWindow()
         if let oldFrame = oldFrame, let window = window {
             // Keep top-left corner fixed (grow downward)
@@ -113,6 +120,61 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             symbolName: "paintpalette")
         contentView.addSubview(label)
 
+        // Click type segmented control
+        currentY -= 28
+        let segmentedControl = NSSegmentedControl(
+            labels: [
+                localized("settings.clickType.left"),
+                localized("settings.clickType.right"),
+                localized("settings.clickType.double"),
+            ],
+            trackingMode: .selectOne,
+            target: self,
+            action: #selector(clickTypeSegmentChanged(_:))
+        )
+        let segmentIndex: Int
+        switch selectedClickType {
+        case .leftClick: segmentIndex = 0
+        case .rightClick: segmentIndex = 1
+        case .doubleClick: segmentIndex = 2
+        }
+        segmentedControl.selectedSegment = segmentIndex
+        segmentedControl.frame = NSRect(
+            x: Self.margin, y: currentY,
+            width: Self.windowWidth - Self.margin * 2, height: 24)
+        contentView.addSubview(segmentedControl)
+
+        // Enable toggle for right/double click
+        if selectedClickType != .leftClick {
+            currentY -= 28
+            let enabledLabel = NSTextField(
+                frame: NSRect(x: Self.margin, y: currentY, width: 230, height: 20))
+            enabledLabel.stringValue =
+                selectedClickType == .rightClick
+                ? localized("settings.clickType.rightEnabled")
+                : localized("settings.clickType.doubleEnabled")
+            enabledLabel.isEditable = false
+            enabledLabel.isBezeled = false
+            enabledLabel.drawsBackground = false
+            enabledLabel.font = .systemFont(ofSize: 13)
+            contentView.addSubview(enabledLabel)
+
+            let toggle = NSSwitch()
+            toggle.controlSize = .small
+            toggle.sizeToFit()
+            toggle.frame.origin = NSPoint(
+                x: Self.windowWidth - Self.margin - toggle.frame.width, y: currentY)
+            let isOn =
+                selectedClickType == .rightClick
+                ? settingsStore.rightClickEnabled : settingsStore.doubleClickEnabled
+            toggle.state = isOn ? .on : .off
+            toggle.target = self
+            toggle.action = #selector(clickTypeEnabledChanged(_:))
+            self.clickTypeEnabledToggle = toggle
+            contentView.addSubview(toggle)
+        }
+
+        // Appearance toggle
         currentY -= 24
         let toggleLabel = NSTextField(
             frame: NSRect(x: Self.margin, y: currentY, width: 230, height: 20))
@@ -126,7 +188,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         let toggle = NSSwitch()
         toggle.controlSize = .small
         toggle.sizeToFit()
-        toggle.frame.origin = NSPoint(x: Self.windowWidth - Self.margin - toggle.frame.width, y: currentY)
+        toggle.frame.origin = NSPoint(
+            x: Self.windowWidth - Self.margin - toggle.frame.width, y: currentY)
         toggle.state = appearanceAware ? .on : .off
         toggle.target = self
         toggle.action = #selector(appearanceToggleChanged(_:))
@@ -134,88 +197,132 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         contentView.addSubview(toggle)
 
         if appearanceAware {
-            currentY -= 24
-            let lightLabel = makeSubLabel(
-                localized("settings.color.light"),
-                origin: NSPoint(x: Self.margin + 8, y: currentY))
-            contentView.addSubview(lightLabel)
-
-            lightColorButtons = []
-            for row in 0..<2 {
-                currentY -= (Self.colorButtonSize + 4)
-                for col in 0..<6 {
-                    let index = row * 6 + col
-                    let preset = Self.colorPresets[index]
-                    let xPos =
-                        Self.margin + CGFloat(col) * (Self.colorButtonSize + Self.colorButtonSpacing)
-
-                    let button = makeColorButton(
-                        frame: NSRect(
-                            x: xPos, y: currentY,
-                            width: Self.colorButtonSize, height: Self.colorButtonSize),
-                        preset: preset,
-                        index: index,
-                        action: #selector(lightColorSelected(_:)),
-                        selectedColor: settingsStore.lightModeColor
-                    )
-                    lightColorButtons.append(button)
-                    contentView.addSubview(button)
-                }
-            }
-
-            currentY -= 24
-            let darkLabel = makeSubLabel(
-                localized("settings.color.dark"),
-                origin: NSPoint(x: Self.margin + 8, y: currentY))
-            contentView.addSubview(darkLabel)
-
-            darkColorButtons = []
-            for row in 0..<2 {
-                currentY -= (Self.colorButtonSize + 4)
-                for col in 0..<6 {
-                    let index = row * 6 + col
-                    let preset = Self.colorPresets[index]
-                    let xPos =
-                        Self.margin + CGFloat(col) * (Self.colorButtonSize + Self.colorButtonSpacing)
-
-                    let button = makeColorButton(
-                        frame: NSRect(
-                            x: xPos, y: currentY,
-                            width: Self.colorButtonSize, height: Self.colorButtonSize),
-                        preset: preset,
-                        index: index,
-                        action: #selector(darkColorSelected(_:)),
-                        selectedColor: settingsStore.darkModeColor
-                    )
-                    darkColorButtons.append(button)
-                    contentView.addSubview(button)
-                }
-            }
+            currentY = addAppearanceAwareColorPalette(to: contentView, yOffset: currentY)
         } else {
-            colorButtons = []
-            for row in 0..<2 {
-                currentY -= (Self.colorButtonSize + 4)
-                for col in 0..<6 {
-                    let index = row * 6 + col
-                    let preset = Self.colorPresets[index]
-                    let xPos =
-                        Self.margin + CGFloat(col) * (Self.colorButtonSize + Self.colorButtonSpacing)
+            currentY = addSingleColorPalette(to: contentView, yOffset: currentY)
+        }
+        return currentY
+    }
 
-                    let button = makeColorButton(
-                        frame: NSRect(
-                            x: xPos, y: currentY,
-                            width: Self.colorButtonSize, height: Self.colorButtonSize),
-                        preset: preset,
-                        index: index,
-                        action: #selector(colorSelected(_:)),
-                        selectedColor: settingsStore.rippleColor
-                    )
-                    colorButtons.append(button)
-                    contentView.addSubview(button)
-                }
+    private func addSingleColorPalette(to contentView: NSView, yOffset: CGFloat) -> CGFloat {
+        var currentY = yOffset
+        let selectedColor = currentSelectedColor()
+        colorButtons = []
+        for row in 0..<2 {
+            currentY -= (Self.colorButtonSize + 4)
+            for col in 0..<6 {
+                let index = row * 6 + col
+                let preset = Self.colorPresets[index]
+                let xPos =
+                    Self.margin + CGFloat(col) * (Self.colorButtonSize + Self.colorButtonSpacing)
+
+                let button = makeColorButton(
+                    frame: NSRect(
+                        x: xPos, y: currentY,
+                        width: Self.colorButtonSize, height: Self.colorButtonSize),
+                    preset: preset,
+                    index: index,
+                    action: #selector(colorSelected(_:)),
+                    selectedColor: selectedColor
+                )
+                colorButtons.append(button)
+                contentView.addSubview(button)
             }
         }
         return currentY
+    }
+
+    private func addAppearanceAwareColorPalette(
+        to contentView: NSView, yOffset: CGFloat
+    ) -> CGFloat {
+        var currentY = yOffset
+        let lightColor = currentLightColor()
+        let darkColor = currentDarkColor()
+
+        currentY -= 24
+        let lightLabel = makeSubLabel(
+            localized("settings.color.light"),
+            origin: NSPoint(x: Self.margin + 8, y: currentY))
+        contentView.addSubview(lightLabel)
+
+        lightColorButtons = []
+        for row in 0..<2 {
+            currentY -= (Self.colorButtonSize + 4)
+            for col in 0..<6 {
+                let index = row * 6 + col
+                let preset = Self.colorPresets[index]
+                let xPos =
+                    Self.margin + CGFloat(col) * (Self.colorButtonSize + Self.colorButtonSpacing)
+
+                let button = makeColorButton(
+                    frame: NSRect(
+                        x: xPos, y: currentY,
+                        width: Self.colorButtonSize, height: Self.colorButtonSize),
+                    preset: preset,
+                    index: index,
+                    action: #selector(lightColorSelected(_:)),
+                    selectedColor: lightColor
+                )
+                lightColorButtons.append(button)
+                contentView.addSubview(button)
+            }
+        }
+
+        currentY -= 24
+        let darkLabel = makeSubLabel(
+            localized("settings.color.dark"),
+            origin: NSPoint(x: Self.margin + 8, y: currentY))
+        contentView.addSubview(darkLabel)
+
+        darkColorButtons = []
+        for row in 0..<2 {
+            currentY -= (Self.colorButtonSize + 4)
+            for col in 0..<6 {
+                let index = row * 6 + col
+                let preset = Self.colorPresets[index]
+                let xPos =
+                    Self.margin + CGFloat(col) * (Self.colorButtonSize + Self.colorButtonSpacing)
+
+                let button = makeColorButton(
+                    frame: NSRect(
+                        x: xPos, y: currentY,
+                        width: Self.colorButtonSize, height: Self.colorButtonSize),
+                    preset: preset,
+                    index: index,
+                    action: #selector(darkColorSelected(_:)),
+                    selectedColor: darkColor
+                )
+                darkColorButtons.append(button)
+                contentView.addSubview(button)
+            }
+        }
+        return currentY
+    }
+
+    // MARK: - Click type color helpers
+
+    private func currentSelectedColor() -> NSColor {
+        switch selectedClickType {
+        case .leftClick: return settingsStore.rippleColor
+        case .rightClick: return settingsStore.rightClickColor
+        case .doubleClick: return settingsStore.doubleClickColor
+        }
+    }
+
+    private func currentLightColor() -> NSColor {
+        switch selectedClickType {
+        case .leftClick: return settingsStore.lightModeColor
+        case .rightClick: return settingsStore.rightClickLightColor
+        case .doubleClick: return settingsStore.doubleClickLightColor
+        }
+    }
+
+    private func currentDarkColor() -> NSColor {
+        switch selectedClickType {
+        case .leftClick: return settingsStore.darkModeColor
+        case .rightClick: return settingsStore.rightClickDarkColor
+        case .doubleClick: return settingsStore.doubleClickDarkColor
+        }
     }
 
     private func addSizeSection(to contentView: NSView, yOffset: CGFloat) -> CGFloat {
@@ -492,9 +599,32 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         rebuildWindow()
     }
 
+    @objc private func clickTypeSegmentChanged(_ sender: NSSegmentedControl) {
+        switch sender.selectedSegment {
+        case 0: selectedClickType = .leftClick
+        case 1: selectedClickType = .rightClick
+        case 2: selectedClickType = .doubleClick
+        default: selectedClickType = .leftClick
+        }
+        rebuildWindow()
+    }
+
+    @objc private func clickTypeEnabledChanged(_ sender: NSSwitch) {
+        let enabled = (sender.state == .on)
+        switch selectedClickType {
+        case .rightClick: settingsStore.rightClickEnabled = enabled
+        case .doubleClick: settingsStore.doubleClickEnabled = enabled
+        case .leftClick: break
+        }
+    }
+
     @objc private func colorSelected(_ sender: NSButton) {
         let preset = Self.colorPresets[sender.tag]
-        settingsStore.rippleColor = preset.color
+        switch selectedClickType {
+        case .leftClick: settingsStore.rippleColor = preset.color
+        case .rightClick: settingsStore.rightClickColor = preset.color
+        case .doubleClick: settingsStore.doubleClickColor = preset.color
+        }
         for button in colorButtons {
             updateColorButtonBorder(button, selected: button.tag == sender.tag)
         }
@@ -502,7 +632,11 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     @objc private func lightColorSelected(_ sender: NSButton) {
         let preset = Self.colorPresets[sender.tag]
-        settingsStore.lightModeColor = preset.color
+        switch selectedClickType {
+        case .leftClick: settingsStore.lightModeColor = preset.color
+        case .rightClick: settingsStore.rightClickLightColor = preset.color
+        case .doubleClick: settingsStore.doubleClickLightColor = preset.color
+        }
         for button in lightColorButtons {
             updateColorButtonBorder(button, selected: button.tag == sender.tag)
         }
@@ -510,7 +644,11 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     @objc private func darkColorSelected(_ sender: NSButton) {
         let preset = Self.colorPresets[sender.tag]
-        settingsStore.darkModeColor = preset.color
+        switch selectedClickType {
+        case .leftClick: settingsStore.darkModeColor = preset.color
+        case .rightClick: settingsStore.rightClickDarkColor = preset.color
+        case .doubleClick: settingsStore.doubleClickDarkColor = preset.color
+        }
         for button in darkColorButtons {
             updateColorButtonBorder(button, selected: button.tag == sender.tag)
         }
@@ -537,6 +675,16 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         settingsStore.lightModeColor = Self.colorPresets[0].color
         settingsStore.darkModeColor = Self.colorPresets[0].color
 
+        settingsStore.rightClickEnabled = true
+        settingsStore.rightClickColor = Self.colorPresets[0].color
+        settingsStore.rightClickLightColor = Self.colorPresets[0].color
+        settingsStore.rightClickDarkColor = Self.colorPresets[0].color
+
+        settingsStore.doubleClickEnabled = true
+        settingsStore.doubleClickColor = Self.colorPresets[0].color
+        settingsStore.doubleClickLightColor = Self.colorPresets[0].color
+        settingsStore.doubleClickDarkColor = Self.colorPresets[0].color
+
         settingsStore.maxRippleSize = Self.sizeSteps[2]
         sizeSlider?.integerValue = 2
 
@@ -549,6 +697,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         settingsStore.launchAtLogin = false
         loginToggle?.state = .off
 
+        selectedClickType = .leftClick
         rebuildWindow()
     }
 
