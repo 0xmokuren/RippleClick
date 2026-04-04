@@ -5,6 +5,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     public static let sizeSteps: [CGFloat] = [30, 70, 100, 150, 200]
     public static let speedSteps: [CFTimeInterval] = [0.25, 0.35, 0.5, 0.7, 1.0]
     public static let opacitySteps: [CGFloat] = [0.15, 0.35, 0.6, 0.8, 1.0]
+    public static let volumeSteps: [Float] = [0.1, 0.25, 0.5, 0.75, 1.0]
 
     public static let colorPresets: [(key: String, color: NSColor)] = [
         ("color.cyan", NSColor(red: 0, green: 1, blue: 1, alpha: 1)),
@@ -22,7 +23,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     ]
 
     private static let windowWidth: CGFloat = 380
-    private static let baseHeight: CGFloat = 470
+    private static let baseHeight: CGFloat = 600
     private static let appearanceExtraHeight: CGFloat = 100
     private static let clickTypeToggleHeight: CGFloat = 28
     private static let margin: CGFloat = 20
@@ -39,6 +40,9 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private var colorButtons: [NSButton] = []
     private var lightColorButtons: [NSButton] = []
     private var darkColorButtons: [NSButton] = []
+    private var soundToggle: NSSwitch?
+    private var soundTypePopUp: NSPopUpButton?
+    private var volumeSlider: NSSlider?
     private var selectedClickType: ClickType = .leftClick
     private var clickTypeEnabledToggle: NSSwitch?
 
@@ -85,6 +89,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         yOffset = addSizeSection(to: contentView, yOffset: yOffset)
         yOffset = addSpeedSection(to: contentView, yOffset: yOffset)
         yOffset = addOpacitySection(to: contentView, yOffset: yOffset)
+        yOffset = addSoundSection(to: contentView, yOffset: yOffset)
         yOffset = addGeneralSection(to: contentView, yOffset: yOffset)
         addResetButton(to: contentView, yOffset: yOffset)
 
@@ -101,6 +106,9 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         lightColorButtons = []
         darkColorButtons = []
         clickTypeEnabledToggle = nil
+        soundToggle = nil
+        soundTypePopUp = nil
+        volumeSlider = nil
         buildWindow()
         if let oldFrame = oldFrame, let window = window {
             // Keep top-left corner fixed (grow downward)
@@ -411,6 +419,81 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         return currentY
     }
 
+    private func addSoundSection(to contentView: NSView, yOffset: CGFloat) -> CGFloat {
+        var currentY = yOffset - 28
+        let title = makeSectionLabel(
+            localized("settings.sound"), origin: NSPoint(x: Self.margin, y: currentY),
+            symbolName: "speaker.wave.2")
+        contentView.addSubview(title)
+
+        currentY -= 24
+        let enabledLabel = NSTextField(
+            frame: NSRect(x: Self.margin, y: currentY, width: 230, height: 20))
+        enabledLabel.stringValue = localized("settings.sound.enabled")
+        enabledLabel.isEditable = false
+        enabledLabel.isBezeled = false
+        enabledLabel.drawsBackground = false
+        enabledLabel.font = .systemFont(ofSize: 13)
+        contentView.addSubview(enabledLabel)
+
+        let toggle = NSSwitch()
+        toggle.controlSize = .small
+        toggle.sizeToFit()
+        toggle.frame.origin = NSPoint(
+            x: Self.windowWidth - Self.margin - toggle.frame.width, y: currentY)
+        toggle.state = settingsStore.soundEnabled ? .on : .off
+        toggle.target = self
+        toggle.action = #selector(soundToggleChanged(_:))
+        self.soundToggle = toggle
+        contentView.addSubview(toggle)
+
+        currentY -= 28
+        let typeLabel = NSTextField(
+            frame: NSRect(x: Self.margin, y: currentY, width: 100, height: 20))
+        typeLabel.stringValue = localized("settings.sound.type")
+        typeLabel.isEditable = false
+        typeLabel.isBezeled = false
+        typeLabel.drawsBackground = false
+        typeLabel.font = .systemFont(ofSize: 13)
+        contentView.addSubview(typeLabel)
+
+        let popUp = NSPopUpButton(
+            frame: NSRect(
+                x: Self.margin + 110, y: currentY - 2,
+                width: Self.windowWidth - Self.margin * 2 - 110, height: 24),
+            pullsDown: false)
+        for soundType in SoundType.allCases {
+            popUp.addItem(withTitle: localized("sound.type.\(soundType.rawValue)"))
+        }
+        let selectedIndex = SoundType.allCases.firstIndex(of: settingsStore.soundType) ?? 0
+        popUp.selectItem(at: selectedIndex)
+        popUp.target = self
+        popUp.action = #selector(soundTypeChanged(_:))
+        self.soundTypePopUp = popUp
+        contentView.addSubview(popUp)
+
+        currentY -= 28
+        let slider = NSSlider(
+            frame: NSRect(x: Self.margin, y: currentY, width: 260, height: 24))
+        slider.minValue = 0
+        slider.maxValue = Double(Self.volumeSteps.count - 1)
+        slider.integerValue = nearestIndex(
+            for: settingsStore.soundVolume, in: Self.volumeSteps)
+        slider.numberOfTickMarks = Self.volumeSteps.count
+        slider.allowsTickMarkValuesOnly = true
+        slider.target = self
+        slider.action = #selector(volumeChanged(_:))
+        self.volumeSlider = slider
+        contentView.addSubview(slider)
+
+        currentY -= 16
+        addEdgeLabels(
+            to: contentView, yPosition: currentY,
+            minText: localized("settings.sound.volume.min"),
+            maxText: localized("settings.sound.volume.max"), sliderWidth: 260)
+        return currentY
+    }
+
     private func addGeneralSection(to contentView: NSView, yOffset: CGFloat) -> CGFloat {
         var currentY = yOffset - 28
         let label = makeSectionLabel(
@@ -697,8 +780,35 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         settingsStore.launchAtLogin = false
         loginToggle?.state = .off
 
+        settingsStore.soundEnabled = false
+        soundToggle?.state = .off
+        settingsStore.soundType = .waterDrop
+        soundTypePopUp?.selectItem(at: 0)
+        settingsStore.soundVolume = Self.volumeSteps[2]
+        volumeSlider?.integerValue = 2
+
         selectedClickType = .leftClick
         rebuildWindow()
+    }
+
+    @objc private func soundToggleChanged(_ sender: NSSwitch) {
+        settingsStore.soundEnabled = (sender.state == .on)
+    }
+
+    @objc private func soundTypeChanged(_ sender: NSPopUpButton) {
+        let index = sender.indexOfSelectedItem
+        if index >= 0, index < SoundType.allCases.count {
+            settingsStore.soundType = SoundType.allCases[index]
+        }
+        SoundPlayer.shared.playSound(
+            type: settingsStore.soundType, volume: settingsStore.soundVolume)
+    }
+
+    @objc private func volumeChanged(_ sender: NSSlider) {
+        let index = min(sender.integerValue, Self.volumeSteps.count - 1)
+        settingsStore.soundVolume = Self.volumeSteps[index]
+        SoundPlayer.shared.playSound(
+            type: settingsStore.soundType, volume: settingsStore.soundVolume)
     }
 
     @objc private func launchAtLoginChanged(_ sender: NSSwitch) {

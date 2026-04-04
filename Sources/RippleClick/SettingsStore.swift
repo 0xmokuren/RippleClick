@@ -51,6 +51,9 @@ public final class SettingsStore {
         static let doubleClickDarkColorGreen = "doubleClickDarkColorGreen"
         static let doubleClickDarkColorBlue = "doubleClickDarkColorBlue"
         static let doubleClickDarkColorAlpha = "doubleClickDarkColorAlpha"
+        static let soundEnabled = "soundEnabled"
+        static let soundType = "soundType"
+        static let soundVolume = "soundVolume"
     }
 
     private static let defaultColor = NSColor(red: 0, green: 1, blue: 1, alpha: 1)  // Cyan
@@ -273,6 +276,33 @@ public final class SettingsStore {
                 NotificationCenter.default.post(name: .rippleColorChanged, object: nil)
             }
         }
+    }
+
+    // MARK: - Sound settings
+
+    public var soundEnabled: Bool {
+        get { defaults.object(forKey: Keys.soundEnabled) as? Bool ?? false }
+        set { defaults.set(newValue, forKey: Keys.soundEnabled) }
+    }
+
+    public var soundType: SoundType {
+        get {
+            guard let raw = defaults.string(forKey: Keys.soundType),
+                let type = SoundType(rawValue: raw)
+            else {
+                return .waterDrop
+            }
+            return type
+        }
+        set { defaults.set(newValue.rawValue, forKey: Keys.soundType) }
+    }
+
+    public var soundVolume: Float {
+        get {
+            guard defaults.object(forKey: Keys.soundVolume) != nil else { return 0.5 }
+            return defaults.float(forKey: Keys.soundVolume)
+        }
+        set { defaults.set(max(0.0, min(newValue, 1.0)), forKey: Keys.soundVolume) }
     }
 
     // MARK: - Click type helpers

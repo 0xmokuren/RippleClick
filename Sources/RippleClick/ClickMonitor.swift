@@ -49,6 +49,11 @@ final class ClickMonitor {
         } else {
             rippleWindowController.showRipple(at: location, clickType: .leftClick)
         }
+
+        if settingsStore.soundEnabled {
+            SoundPlayer.shared.playSound(
+                type: settingsStore.soundType, volume: settingsStore.soundVolume)
+        }
     }
 
     private func requestAccessibilityIfNeeded() {

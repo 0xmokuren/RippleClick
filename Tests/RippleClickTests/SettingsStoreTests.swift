@@ -293,4 +293,55 @@ final class SettingsStoreTests: XCTestCase {
         doubleColor.getRed(nil, green: nil, blue: &doubleBlue, alpha: nil)
         XCTAssertEqual(doubleBlue, 1, accuracy: 0.01)
     }
+
+    // MARK: - Sound settings
+
+    func testSoundEnabledDefaultsToFalse() {
+        let store = makeStore()
+        XCTAssertFalse(store.soundEnabled)
+    }
+
+    func testSoundEnabledPersistsValue() {
+        let store = makeStore()
+        store.soundEnabled = true
+        XCTAssertTrue(store.soundEnabled)
+    }
+
+    func testSoundTypeDefaultsToWaterDrop() {
+        let store = makeStore()
+        XCTAssertEqual(store.soundType, .waterDrop)
+    }
+
+    func testSoundTypePersistsValue() {
+        let store = makeStore()
+        store.soundType = .bubble
+        XCTAssertEqual(store.soundType, .bubble)
+    }
+
+    func testSoundTypeHandlesInvalidRawValue() {
+        let suiteName = "com.0xmokuren.RippleClickTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.set("nonexistentSound", forKey: "soundType")
+        let store = SettingsStore(defaults: defaults)
+        XCTAssertEqual(store.soundType, .waterDrop)
+    }
+
+    func testSoundVolumeDefaultsToHalf() {
+        let store = makeStore()
+        XCTAssertEqual(store.soundVolume, 0.5, accuracy: 0.001)
+    }
+
+    func testSoundVolumePersistsValue() {
+        let store = makeStore()
+        store.soundVolume = 0.75
+        XCTAssertEqual(store.soundVolume, 0.75, accuracy: 0.001)
+    }
+
+    func testSoundVolumeClampsToRange() {
+        let store = makeStore()
+        store.soundVolume = -1.0
+        XCTAssertEqual(store.soundVolume, 0.0, accuracy: 0.001)
+        store.soundVolume = 5.0
+        XCTAssertEqual(store.soundVolume, 1.0, accuracy: 0.001)
+    }
 }
