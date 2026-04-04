@@ -86,12 +86,10 @@ final class RippleView: NSView {
 
             let circleLayer = CAShapeLayer()
             circleLayer.path = initialPath
-            circleLayer.fillColor = rippleColor.withAlphaComponent(
-                Self.fillOpacity * rippleOpacity * ringOpacityScale
-            ).cgColor
-            circleLayer.strokeColor = rippleColor.withAlphaComponent(
-                rippleOpacity * ringOpacityScale
-            ).cgColor
+            let fillAlpha = Self.fillOpacity * rippleOpacity * ringOpacityScale
+            circleLayer.fillColor = rippleColor.withAlphaComponent(fillAlpha).cgColor
+            let strokeAlpha = rippleOpacity * ringOpacityScale
+            circleLayer.strokeColor = rippleColor.withAlphaComponent(strokeAlpha).cgColor
             circleLayer.lineWidth = Self.strokeWidth * strokeMultiplier
             circleLayer.frame = bounds
             layer.addSublayer(circleLayer)
