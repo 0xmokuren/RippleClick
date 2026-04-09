@@ -307,9 +307,9 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertTrue(store.soundEnabled)
     }
 
-    func testSoundTypeDefaultsToWaterDrop() {
+    func testSoundTypeDefaultsToSoftClick() {
         let store = makeStore()
-        XCTAssertEqual(store.soundType, .waterDrop)
+        XCTAssertEqual(store.soundType, .softClick)
     }
 
     func testSoundTypePersistsValue() {
@@ -323,7 +323,7 @@ final class SettingsStoreTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.set("nonexistentSound", forKey: "soundType")
         let store = SettingsStore(defaults: defaults)
-        XCTAssertEqual(store.soundType, .waterDrop)
+        XCTAssertEqual(store.soundType, .softClick)
     }
 
     func testSoundVolumeDefaultsToHalf() {

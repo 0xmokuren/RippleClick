@@ -290,7 +290,7 @@ public final class SettingsStore {
             guard let raw = defaults.string(forKey: Keys.soundType),
                 let type = SoundType(rawValue: raw)
             else {
-                return .waterDrop
+                return .softClick
             }
             return type
         }

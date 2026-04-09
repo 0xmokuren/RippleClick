@@ -42,6 +42,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private var darkColorButtons: [NSButton] = []
     private var soundToggle: NSSwitch?
     private var soundTypePopUp: NSPopUpButton?
+    private var soundPreviewButton: NSButton?
     private var volumeSlider: NSSlider?
     private var selectedClickType: ClickType = .leftClick
     private var clickTypeEnabledToggle: NSSwitch?
@@ -108,6 +109,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         clickTypeEnabledToggle = nil
         soundToggle = nil
         soundTypePopUp = nil
+        soundPreviewButton = nil
         volumeSlider = nil
         buildWindow()
         if let oldFrame = oldFrame, let window = window {
@@ -460,7 +462,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         let popUp = NSPopUpButton(
             frame: NSRect(
                 x: Self.margin + 110, y: currentY - 2,
-                width: Self.windowWidth - Self.margin * 2 - 110, height: 24),
+                width: Self.windowWidth - Self.margin * 2 - 110 - 34, height: 24),
             pullsDown: false)
         for soundType in SoundType.allCases {
             popUp.addItem(withTitle: localized("sound.type.\(soundType.rawValue)"))
@@ -471,6 +473,20 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         popUp.action = #selector(soundTypeChanged(_:))
         self.soundTypePopUp = popUp
         contentView.addSubview(popUp)
+
+        let previewButton = NSButton(frame: NSRect(
+            x: Self.margin + 110 + 196 + 4, y: currentY - 2,
+            width: 30, height: 24))
+        previewButton.image = NSImage(
+            systemSymbolName: "play.circle",
+            accessibilityDescription: localized("settings.sound.preview"))
+        previewButton.bezelStyle = .accessoryBarAction
+        previewButton.imagePosition = .imageOnly
+        previewButton.target = self
+        previewButton.action = #selector(soundPreviewPressed(_:))
+        previewButton.isEnabled = settingsStore.soundEnabled
+        self.soundPreviewButton = previewButton
+        contentView.addSubview(previewButton)
 
         currentY -= 28
         let slider = NSSlider(
@@ -782,8 +798,9 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
         settingsStore.soundEnabled = false
         soundToggle?.state = .off
-        settingsStore.soundType = .waterDrop
-        soundTypePopUp?.selectItem(at: 0)
+        soundPreviewButton?.isEnabled = false
+        settingsStore.soundType = .softClick
+        soundTypePopUp?.selectItem(at: SoundType.allCases.firstIndex(of: .softClick) ?? 4)
         settingsStore.soundVolume = Self.volumeSteps[2]
         volumeSlider?.integerValue = 2
 
@@ -793,6 +810,12 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     @objc private func soundToggleChanged(_ sender: NSSwitch) {
         settingsStore.soundEnabled = (sender.state == .on)
+        soundPreviewButton?.isEnabled = (sender.state == .on)
+    }
+
+    @objc private func soundPreviewPressed(_ sender: NSButton) {
+        SoundPlayer.shared.playSound(
+            type: settingsStore.soundType, volume: settingsStore.soundVolume)
     }
 
     @objc private func soundTypeChanged(_ sender: NSPopUpButton) {
