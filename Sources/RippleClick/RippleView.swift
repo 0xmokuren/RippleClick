@@ -32,6 +32,15 @@ final class RippleView: NSView {
         wantsLayer = true
     }
 
+    func clearLayers() {
+        if let sublayers = layer?.sublayers {
+            for sublayer in sublayers {
+                sublayer.removeFromSuperlayer()
+            }
+        }
+        layer?.removeAllAnimations()
+    }
+
     func reset(
         color: NSColor, maxSize: CGFloat, duration: CFTimeInterval, opacity: CGFloat,
         ringCount: Int = 1, strokeMultiplier: CGFloat = 1.0
@@ -42,12 +51,7 @@ final class RippleView: NSView {
         self.rippleOpacity = opacity
         self.ringCount = ringCount
         self.strokeMultiplier = strokeMultiplier
-        if let sublayers = layer?.sublayers {
-            for sublayer in sublayers {
-                sublayer.removeFromSuperlayer()
-            }
-        }
-        layer?.removeAllAnimations()
+        clearLayers()
     }
 
     @available(*, unavailable)

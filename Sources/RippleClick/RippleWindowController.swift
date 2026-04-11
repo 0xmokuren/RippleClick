@@ -99,6 +99,7 @@ final class RippleWindowController {
 
     private func recycleWindow(_ window: NSWindow) {
         window.orderOut(nil)
+        (window.contentView as? RippleView)?.clearLayers()
         if windowPool.count < Self.maxConcurrentWindows {
             windowPool.append(window)
         }

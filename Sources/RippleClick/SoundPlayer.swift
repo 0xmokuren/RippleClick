@@ -9,6 +9,7 @@ final class SoundPlayer {
     private let sampleRate: Double = 44100
     private let format: AVAudioFormat
     private var isEngineRunning = false
+    private var cachedBuffers: [SoundType: AVAudioPCMBuffer] = [:]
 
     private init() {
         // swiftlint:disable:next force_unwrapping
@@ -21,7 +22,7 @@ final class SoundPlayer {
         guard volume > 0 else { return }
         ensureEngineRunning()
         engine.mainMixerNode.outputVolume = volume
-        let buffer = generateBuffer(for: type)
+        let buffer = cachedBuffers[type] ?? generateAndCacheBuffer(for: type)
         playerNode.scheduleBuffer(buffer, completionHandler: nil)
         if !playerNode.isPlaying {
             playerNode.play()
@@ -38,7 +39,13 @@ final class SoundPlayer {
         }
     }
 
-    func generateBuffer(for type: SoundType) -> AVAudioPCMBuffer {
+    private func generateAndCacheBuffer(for type: SoundType) -> AVAudioPCMBuffer {
+        let buffer = generateBuffer(for: type)
+        cachedBuffers[type] = buffer
+        return buffer
+    }
+
+    private func generateBuffer(for type: SoundType) -> AVAudioPCMBuffer {
         switch type {
         case .waterDrop: return makeBuffer(duration: 0.15, synthesizer: waterDropSample)
         case .pop: return makeBuffer(duration: 0.08, synthesizer: popSample)
