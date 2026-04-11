@@ -474,9 +474,10 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         self.soundTypePopUp = popUp
         contentView.addSubview(popUp)
 
-        let previewButton = NSButton(frame: NSRect(
-            x: Self.margin + 110 + 196 + 4, y: currentY - 2,
-            width: 30, height: 24))
+        let previewButton = NSButton(
+            frame: NSRect(
+                x: Self.margin + 110 + 196 + 4, y: currentY - 2,
+                width: 30, height: 24))
         previewButton.image = NSImage(
             systemSymbolName: "play.circle",
             accessibilityDescription: localized("settings.sound.preview"))
