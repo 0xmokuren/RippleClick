@@ -48,3 +48,16 @@ Swift Package は2つのターゲットに分離されている:
 ## テスト
 
 テストでは `SettingsStore(defaults:)` イニシャライザで専用の UserDefaults suite を使い、テスト間の状態を分離する。
+
+## リリース
+
+タグを push すると `.github/workflows/release.yml` が自動でリリースを作成する（ビルド → ZIP → GitHub Release → Homebrew Cask 更新）。
+
+**手動で `gh release create` しないこと。** CI の Release ワークフローと競合し、アセット上書きエラー（"Cannot delete asset from an immutable release"）が発生する。
+
+リリース手順:
+```bash
+git tag v0.0.X
+git push origin v0.0.X
+# あとは CI が自動処理する
+```
