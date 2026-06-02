@@ -86,7 +86,7 @@ final class SettingsStoreTests: XCTestCase {
     }
 
     func testSpeedStepsHasFiveLevels() {
-        let steps = SettingsWindowController.speedSteps
+        let steps = SettingsViewController.speedSteps
         XCTAssertEqual(steps.count, 5)
         XCTAssertEqual(steps.first, 0.25)
         XCTAssertEqual(steps.last, 1.0)
@@ -107,7 +107,7 @@ final class SettingsStoreTests: XCTestCase {
     }
 
     func testOpacityStepsHasFiveLevels() {
-        let steps = SettingsWindowController.opacitySteps
+        let steps = SettingsViewController.opacitySteps
         XCTAssertEqual(steps.count, 5)
         XCTAssertEqual(steps.first, 0.15)
         XCTAssertEqual(steps.last, 1.0)
@@ -195,7 +195,7 @@ final class SettingsStoreTests: XCTestCase {
     }
 
     func testSizeStepsHasFiveLevels() {
-        let steps = SettingsWindowController.sizeSteps
+        let steps = SettingsViewController.sizeSteps
         XCTAssertEqual(steps.count, 5)
         XCTAssertEqual(steps.first, 30)
         XCTAssertEqual(steps.last, 200)
@@ -343,5 +343,62 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.soundVolume, 0.0, accuracy: 0.001)
         store.soundVolume = 5.0
         XCTAssertEqual(store.soundVolume, 1.0, accuracy: 0.001)
+    }
+
+    // MARK: - SettingsViewController
+
+    func testSettingsViewControllerLoadsWithValidContentSize() {
+        let store = makeStore()
+        let viewController = SettingsViewController(settingsStore: store)
+        _ = viewController.view
+        XCTAssertGreaterThan(viewController.preferredContentSize.width, 0)
+        XCTAssertGreaterThan(viewController.preferredContentSize.height, 0)
+    }
+
+    func testDocumentHeightAccommodatesContentForAllClickTypes() {
+        let store = makeStore()
+        let viewController = SettingsViewController(settingsStore: store)
+        _ = viewController.view
+        for aware in [false, true] {
+            store.appearanceAwareColor = aware
+            for clickType in [ClickType.leftClick, .rightClick, .doubleClick] {
+                viewController.selectedClickType = clickType
+                let expected =
+                    viewController.contentHeight() - SettingsViewController.effectToggleRowHeight
+                XCTAssertEqual(viewController.documentHeight(), expected, accuracy: 0.5)
+                XCTAssertGreaterThan(viewController.documentHeight(), 0)
+            }
+        }
+    }
+
+    func testContentHeightReflectsAppearanceAndClickType() {
+        let store = makeStore()
+        let viewController = SettingsViewController(settingsStore: store)
+        _ = viewController.view
+        store.appearanceAwareColor = false
+        viewController.selectedClickType = .leftClick
+        let base = viewController.contentHeight()
+        XCTAssertEqual(base, SettingsViewController.baseHeight, accuracy: 0.5)
+        viewController.selectedClickType = .rightClick
+        XCTAssertEqual(
+            viewController.contentHeight(), base + SettingsViewController.clickTypeToggleHeight,
+            accuracy: 0.5)
+        store.appearanceAwareColor = true
+        viewController.selectedClickType = .leftClick
+        XCTAssertEqual(
+            viewController.contentHeight(), base + SettingsViewController.appearanceExtraHeight,
+            accuracy: 0.5)
+    }
+
+    func testRebuildContentDoesNotChangePreferredContentSize() {
+        let store = makeStore()
+        let viewController = SettingsViewController(settingsStore: store)
+        _ = viewController.view
+        let before = viewController.preferredContentSize
+        viewController.selectedClickType = .rightClick
+        viewController.rebuildContent()
+        XCTAssertEqual(viewController.preferredContentSize.width, before.width, accuracy: 0.5)
+        XCTAssertEqual(viewController.preferredContentSize.height, before.height, accuracy: 0.5)
+        XCTAssertEqual(viewController.view.frame.height, before.height, accuracy: 0.5)
     }
 }

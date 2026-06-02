@@ -4,7 +4,9 @@ import AppKit
 final class StatusBarController {
     private let statusItem: NSStatusItem
     private let settingsStore: SettingsStore
-    private var settingsWindowController: SettingsWindowController?
+    private var settingsViewController: SettingsViewController?
+    private var settingsPopover: NSPopover?
+    private var contextMenu: NSMenu?
     private var toggleMenuItem: NSMenuItem?
 
     var onToggle: ((Bool) -> Void)?
@@ -14,7 +16,7 @@ final class StatusBarController {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
 
         updateIcon()
-        setupMenu()
+        setupStatusButton()
 
         NotificationCenter.default.addObserver(
             self,
@@ -60,7 +62,7 @@ final class StatusBarController {
         updateIcon()
     }
 
-    private func setupMenu() {
+    private func setupStatusButton() {
         let menu = NSMenu()
 
         toggleMenuItem = NSMenuItem(
@@ -71,16 +73,6 @@ final class StatusBarController {
         toggleMenuItem?.target = self
         toggleMenuItem?.state = settingsStore.isEnabled ? .on : .off
         if let item = toggleMenuItem { menu.addItem(item) }
-
-        menu.addItem(.separator())
-
-        let settingsItem = NSMenuItem(
-            title: localized("menu.settings"),
-            action: #selector(openSettings),
-            keyEquivalent: ","
-        )
-        settingsItem.target = self
-        menu.addItem(settingsItem)
 
         menu.addItem(.separator())
 
@@ -100,26 +92,86 @@ final class StatusBarController {
         quitItem.target = self
         menu.addItem(quitItem)
 
-        statusItem.menu = menu
+        contextMenu = menu
+
+        statusItem.button?.target = self
+        statusItem.button?.action = #selector(statusItemClicked(_:))
+        statusItem.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
     }
 
     @objc private func toggleEffect() {
         let newState = !settingsStore.isEnabled
         settingsStore.isEnabled = newState
-        toggleMenuItem?.state = newState ? .on : .off
-        updateIcon()
-        onToggle?(newState)
+        handleEffectToggled(newState)
     }
 
-    @objc private func openSettings() {
-        if settingsWindowController == nil {
-            settingsWindowController = SettingsWindowController(settingsStore: settingsStore)
+    private func handleEffectToggled(_ enabled: Bool) {
+        toggleMenuItem?.state = enabled ? .on : .off
+        updateIcon()
+        onToggle?(enabled)
+    }
+
+    @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
+        let event = NSApp.currentEvent
+        let isRightClick =
+            event?.type == .rightMouseUp || (event?.modifierFlags.contains(.control) ?? false)
+        if isRightClick {
+            showContextMenu()
+        } else {
+            togglePopover()
         }
-        settingsWindowController?.showWindow()
+    }
+
+    private func showContextMenu() {
+        guard let menu = contextMenu else { return }
+        toggleMenuItem?.state = settingsStore.isEnabled ? .on : .off
+        statusItem.menu = menu
+        statusItem.button?.performClick(nil)
+        statusItem.menu = nil
+    }
+
+    private func togglePopover() {
+        if let popover = settingsPopover, popover.isShown {
+            popover.performClose(nil)
+            settingsPopover = nil
+            return
+        }
+
+        if settingsViewController == nil {
+            let viewController = SettingsViewController(settingsStore: settingsStore)
+            viewController.onEffectToggle = { [weak self] enabled in
+                self?.handleEffectToggled(enabled)
+            }
+            settingsViewController = viewController
+        }
+
+        let popover = NSPopover()
+        popover.contentViewController = settingsViewController
+        popover.behavior = .transient
+        popover.animates = false
+        popover.delegate = settingsViewController
+        settingsPopover = popover
+        settingsViewController?.popover = popover
+        settingsViewController?.syncEffectToggle()
+
+        guard let button = statusItem.button else { return }
+        if let viewController = settingsViewController {
+            viewController.applyPopoverGeometry(viewHeight: viewController.popoverViewHeight())
+        }
+        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        activateApp()
+    }
+
+    private func activateApp() {
+        if #available(macOS 14.0, *) {
+            NSApp.activate()
+        } else {
+            NSApp.activate(ignoringOtherApps: true)
+        }
     }
 
     @objc private func showAbout() {
-        NSApp.activate(ignoringOtherApps: true)
+        activateApp()
         NSApp.orderFrontStandardAboutPanel(nil)
     }
 

@@ -17,7 +17,7 @@ final class LocalizationTests: XCTestCase {
     }
 
     func testAllColorPresetKeysAreLocalized() {
-        let colorKeys = SettingsWindowController.colorPresets.map(\.key)
+        let colorKeys = SettingsViewController.colorPresets.map(\.key)
         for key in colorKeys {
             let result = localized(key)
             XCTAssertNotEqual(result, key, "Color key '\(key)' should be localized")
