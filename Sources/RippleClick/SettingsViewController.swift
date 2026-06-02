@@ -205,7 +205,9 @@ final class SettingsViewController: NSViewController, NSPopoverDelegate {
 
     func rebuildContent() {
         guard let sections = sectionsView else { return }
-        sections.subviews.forEach { $0.removeFromSuperview() }
+        for subview in sections.subviews {
+            subview.removeFromSuperview()
+        }
         colorButtons = []
         lightColorButtons = []
         darkColorButtons = []
