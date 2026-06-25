@@ -102,7 +102,7 @@ open RippleClick.app
 
 ## Contributing
 
-Issues and pull requests are welcome. Please run `swiftlint lint --strict` and `swift-format lint --strict --recursive Sources/ Tests/` before opening a PR, and keep the four README translations in sync when you change user-facing text.
+Issues and pull requests are welcome. Please run `swiftlint lint --strict` before opening a PR, and keep the four README translations in sync when you change user-facing text.
 
 ## License
 

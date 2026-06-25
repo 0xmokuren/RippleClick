@@ -14,15 +14,14 @@ swift run                # 開発実行
 swift test               # 全テスト実行
 swift test --filter SettingsStoreTests/testIsEnabledDefaultsToTrue  # 単一テスト実行
 
-# Lint / Format（CI と同じ）
+# Lint（CI と同じ）
 swiftlint lint --strict
-swift-format lint --strict --recursive Sources/ Tests/
 
 # リリースビルド（.app バンドル生成）
 bash scripts/bundle.sh
 ```
 
-同等のショートカットとして `Makefile`（`make build` / `run` / `test` / `lint` / `format` / `bundle`）もある。CI（`.github/workflows/ci.yml`）は main への push / PR で build+test・lint・format の3ジョブを `macos-15` 上で実行する。
+同等のショートカットとして `Makefile`（`make build` / `run` / `test` / `lint` / `bundle`）もある。CI（`.github/workflows/ci.yml`）は main への push / PR で build+test と lint の2ジョブを `macos-15` 上で実行する。
 
 ## アーキテクチャ
 

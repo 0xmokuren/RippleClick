@@ -102,7 +102,7 @@ open RippleClick.app
 
 ## 参与贡献
 
-欢迎提交 Issue 和 Pull Request。提交 PR 前请运行 `swiftlint lint --strict` 与 `swift-format lint --strict --recursive Sources/ Tests/`；若修改了面向用户的文案，请同步更新四种语言的 README。
+欢迎提交 Issue 和 Pull Request。提交 PR 前请运行 `swiftlint lint --strict`；若修改了面向用户的文案，请同步更新四种语言的 README。
 
 ## 许可证
 

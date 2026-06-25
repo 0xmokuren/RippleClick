@@ -14,10 +14,6 @@ test:
 lint:
 	swiftlint lint --strict
 
-.PHONY: format
-format:
-	swift-format lint --strict --recursive Sources/ Tests/
-
 .PHONY: bundle
 bundle:
 	bash scripts/bundle.sh
