@@ -5,6 +5,19 @@ final class FlippedClipView: NSClipView {
     override var isFlipped: Bool { true }
 }
 
+/// 設定ポップオーバーのルートビュー。
+/// NSPopover 主導のリサイズは frame だけ先に変わり `viewDidLayout` は次のパスまで来ないため、
+/// その1フレームだけヘッダーが旧位置に残る。frame 変更と同期して再配置するために hook する。
+@MainActor
+final class SettingsContainerView: NSVisualEffectView {
+    var onFrameSizeChange: (() -> Void)?
+
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        onFrameSizeChange?()
+    }
+}
+
 @MainActor
 final class SettingsViewController: NSViewController, NSPopoverDelegate {
     public static let sizeSteps: [CGFloat] = [30, 70, 100, 150, 200]
@@ -80,12 +93,15 @@ final class SettingsViewController: NSViewController, NSPopoverDelegate {
     }
 
     override func loadView() {
-        let effectView = NSVisualEffectView(
+        let effectView = SettingsContainerView(
             frame: NSRect(
                 x: 0, y: 0, width: Self.contentWidth, height: Self.minViewHeight))
         effectView.material = .popover
         effectView.state = .active
         effectView.blendingMode = .behindWindow
+        effectView.onFrameSizeChange = { [weak self] in
+            self?.layoutChrome()
+        }
 
         // クロームは幅を確定させてから中身を組む。幅0の親に追加すると autoresizing の
         // 比例計算が崩れ、セグメントコントロールなどの幅が壊れる。
@@ -153,19 +169,34 @@ final class SettingsViewController: NSViewController, NSPopoverDelegate {
         return max(measuredContentHeight, Self.minViewHeight - Self.chromeHeight)
     }
 
-    /// view / header / tabBar / scroll の frame と preferredContentSize を
-    /// 同一の同期パスで揃える。表示中に呼んでも非同期リサイズが挟まらない。
+    /// 非表示時のサイズ確定用。表示中に呼ぶと NSPopover 側のウィンドウ高と食い違うので
+    /// 呼んではいけない（表示中は popover.contentSize 経由でリサイズする）。
     func applyGeometry(viewHeight: CGFloat) {
-        let width = Self.contentWidth
-        view.frame.size = NSSize(width: width, height: viewHeight)
-        headerView?.frame = NSRect(
-            x: 0, y: viewHeight - Self.headerHeight, width: width, height: Self.headerHeight)
-        tabBarView?.frame = NSRect(
-            x: 0, y: viewHeight - Self.chromeHeight, width: width, height: Self.tabBarHeight)
-        scrollView?.frame = NSRect(
-            x: 0, y: 0, width: width, height: max(0, viewHeight - Self.chromeHeight))
-        preferredContentSize = NSSize(width: width, height: viewHeight)
+        view.frame.size = NSSize(width: Self.contentWidth, height: viewHeight)
+        preferredContentSize = view.frame.size
+        layoutChrome()
         scrollToTop()
+    }
+
+    /// ヘッダー・タブバー・スクロール領域を view の実寸から配置する。
+    /// NSPopover 主導のリサイズでは `SettingsContainerView.setFrameSize` から同期的に、
+    /// それ以外のレイアウトパスでは `viewDidLayout` からここに来る。
+    /// `isViewLoaded` を見るのは、loadView 中の frame 変更で loadView に再帰しないため。
+    func layoutChrome() {
+        guard isViewLoaded else { return }
+        let width = view.frame.width
+        let height = view.frame.height
+        headerView?.frame = NSRect(
+            x: 0, y: height - Self.headerHeight, width: width, height: Self.headerHeight)
+        tabBarView?.frame = NSRect(
+            x: 0, y: height - Self.chromeHeight, width: width, height: Self.tabBarHeight)
+        scrollView?.frame = NSRect(
+            x: 0, y: 0, width: width, height: max(0, height - Self.chromeHeight))
+    }
+
+    override func viewDidLayout() {
+        super.viewDidLayout()
+        layoutChrome()
     }
 
     /// StatusBarController が show する直前に呼ぶ。トグル状態を実際の設定に合わせ、
@@ -281,12 +312,18 @@ final class SettingsViewController: NSViewController, NSPopoverDelegate {
         buildSections()
 
         // タブ切替や外観トグルで高さが変わるため、表示中でもリサイズする。
-        // animates = false かつ frame と contentSize を同期パスで揃えるのでちらつかない。
         let height = popoverViewHeight()
-        applyGeometry(viewHeight: height)
-        if let popover = popover, popover.isShown {
-            popover.contentSize = NSSize(width: Self.contentWidth, height: height)
+        guard let popover = popover, popover.isShown else {
+            applyGeometry(viewHeight: height)
+            return
         }
+        // 表示中は view.frame を先に書き換えてはいけない。NSPopover は contentSize を
+        // view の実寸から見ているため、先に縮めると代入が同値扱いで無視され、
+        // ウィンドウだけ前のタブの高さに取り残される。ウィンドウと view の
+        // リサイズは popover に任せ、こちらは配置のみ viewDidLayout で追従する。
+        popover.contentSize = NSSize(width: Self.contentWidth, height: height)
+        preferredContentSize = NSSize(width: Self.contentWidth, height: height)
+        scrollToTop()
     }
 
     private func clearControlReferences() {

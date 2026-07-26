@@ -412,6 +412,30 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertGreaterThan(viewController.documentHeight(), base)
     }
 
+    /// 表示中の NSPopover はウィンドウ側から view をリサイズする。その高さに
+    /// ヘッダー・タブバー・スクロール領域が追従しないと、上部に空き帯ができる。
+    func testChromeFollowsExternalResize() {
+        let store = makeStore()
+        let viewController = SettingsViewController(settingsStore: store)
+        _ = viewController.view
+        viewController.selectTab(.ripple)
+
+        let resized: CGFloat = 500
+        viewController.view.frame.size = NSSize(
+            width: SettingsViewController.contentWidth, height: resized)
+        viewController.view.needsLayout = true
+        viewController.view.layoutSubtreeIfNeeded()
+
+        XCTAssertEqual(viewController.headerView?.frame.maxY, resized)
+        XCTAssertEqual(
+            viewController.tabBarView?.frame.maxY,
+            resized - SettingsViewController.headerHeight)
+        XCTAssertEqual(viewController.scrollView?.frame.minY, 0)
+        XCTAssertEqual(
+            viewController.scrollView?.frame.height,
+            resized - SettingsViewController.chromeHeight)
+    }
+
     func testTabTitlesAreLocalizedForEveryTab() {
         for tab in SettingsTab.allCases {
             XCTAssertNotEqual(localized(tab.titleKey), tab.titleKey)
