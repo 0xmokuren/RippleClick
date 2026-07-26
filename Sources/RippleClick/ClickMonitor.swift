@@ -4,8 +4,9 @@ import ApplicationServices
 @MainActor
 final class ClickMonitor {
     private let settingsStore: SettingsStore
-    private let rippleWindowController: RippleWindowController
-    private var monitor: Any?
+    let rippleWindowController: RippleWindowController
+    private(set) var globalMonitor: Any?
+    private(set) var localMonitor: Any?
 
     var isEnabled: Bool {
         get { settingsStore.isEnabled }
@@ -20,23 +21,36 @@ final class ClickMonitor {
     func start() {
         requestAccessibilityIfNeeded()
 
-        monitor = NSEvent.addGlobalMonitorForEvents(
+        globalMonitor = NSEvent.addGlobalMonitorForEvents(
             matching: [.leftMouseDown, .rightMouseDown]
         ) { [weak self] event in
             DispatchQueue.main.async {
                 self?.handleClick(event)
             }
         }
-    }
 
-    func stop() {
-        if let monitor = monitor {
-            NSEvent.removeMonitor(monitor)
-            self.monitor = nil
+        // グローバル監視は自アプリがアクティブな間はイベントを受け取らないため、
+        // 設定ポップオーバーを開いている最中だけ波紋が出なくなる。ローカル監視を併用して、
+        // 設定を触りながらその場で見え方を確認できるようにする。
+        localMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { [weak self] event in
+            DispatchQueue.main.async {
+                self?.handleClick(event)
+            }
+            return event
         }
     }
 
-    private func handleClick(_ event: NSEvent) {
+    func stop() {
+        for monitor in [globalMonitor, localMonitor].compactMap({ $0 }) {
+            NSEvent.removeMonitor(monitor)
+        }
+        globalMonitor = nil
+        localMonitor = nil
+    }
+
+    func handleClick(_ event: NSEvent) {
         guard settingsStore.isEnabled else { return }
         let location = NSEvent.mouseLocation
 
@@ -66,7 +80,7 @@ final class ClickMonitor {
     }
 
     deinit {
-        if let monitor = monitor {
+        for monitor in [globalMonitor, localMonitor].compactMap({ $0 }) {
             NSEvent.removeMonitor(monitor)
         }
     }

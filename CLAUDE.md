@@ -36,7 +36,7 @@ Swift Package は2つのターゲットに分離されている:
 `AppDelegate` が起動時に `NSApp.setActivationPolicy(.accessory)` を設定し、`SettingsStore.shared` を生成して `StatusBarController`（メニューバーUI）と `ClickMonitor`（グローバルクリック監視）に注入する。さらに `effectiveAppearance` を KVO 監視し、ライト/ダーク切替時に `appearanceAwareColor` が有効なら `.rippleColorChanged` を post する。
 
 クリック検知フロー:
-1. `ClickMonitor` が `NSEvent.addGlobalMonitorForEvents([.leftMouseDown, .rightMouseDown])` で監視
+1. `ClickMonitor` が `NSEvent.addGlobalMonitorForEvents([.leftMouseDown, .rightMouseDown])` **と** `addLocalMonitorForEvents` の**両方**で監視する。グローバル監視は自アプリがアクティブな間はイベントを受け取らないため、それだけだと設定ポップオーバーを開いている最中に波紋が出ない（設定を触りながら見え方を試せない）。両者は排他なので二重発火しない。ローカル監視はアクセシビリティ権限が無くても動くので、権限未許可でも設定画面上のプレビューは機能する
 2. 種別を判定（右クリック / `clickCount >= 2` のダブルクリック / 左クリック）し、各種別の有効フラグを確認してから `RippleWindowController.showRipple(at:clickType:)` を呼ぶ
 3. `RippleWindowController` がクリック種別に応じてサイズ・色・リング数・線幅を決め、透明ボーダレスウィンドウを生成 → `RippleView`（CALayer アニメーション）が波紋を描画
 4. `soundEnabled` なら `SoundPlayer.shared.playSound` で効果音を再生
