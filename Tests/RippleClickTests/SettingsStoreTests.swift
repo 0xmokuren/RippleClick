@@ -475,8 +475,12 @@ final class SettingsStoreTests: XCTestCase {
     }
 
     func testResetConfirmStringsAreLocalized() {
-        for key in ["settings.reset.confirm.title", "settings.reset.confirm.message", "common.cancel"]
-        {
+        let keys = [
+            "settings.reset.confirm.title",
+            "settings.reset.confirm.message",
+            "common.cancel",
+        ]
+        for key in keys {
             XCTAssertNotEqual(localized(key), key)
         }
     }
