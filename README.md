@@ -77,7 +77,7 @@ Download the latest `.zip` from [Releases](https://github.com/0xmokuren/RippleCl
 
 1. Launch RippleClick — a 💧 icon appears in the menu bar.
 2. **Click the icon** — the settings panel opens right below it, with the effect **ON / OFF** switch always in the header.
-3. Use the four tabs to find a setting fast: **Ripple** (size, speed, opacity), **Color** (per click type, light/dark), **Sound** (type, preview, volume), **General** (launch at login, reset, about, quit).
+3. Use the four tabs to find a setting fast: **Ripple** (size, speed, opacity), **Color** (per click type, light/dark), **Sound** (type, preview, volume), **General** (launch at login, reset, about, quit). **Reset** asks for confirmation first, so a stray click can't wipe your settings.
 4. **Right-click the icon** for a quick menu (settings, effect toggle, about, quit).
 5. Ripples keep playing while the settings panel is open, so you can **click right there to preview** as you tweak color and size.
 

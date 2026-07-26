@@ -452,7 +452,33 @@ final class SettingsViewController: NSViewController, NSPopoverDelegate {
     }
 
     @objc func showAboutPanel() {
+        // About パネルは通常ウィンドウレベルなので、フローティングなポップオーバーを開いたままだと
+        // その背面に隠れて何も起きていないように見える。先に閉じ、アクティブ化してから出す。
+        popover?.performClose(nil)
+        activateApp()
         NSApp.orderFrontStandardAboutPanel(nil)
+    }
+
+    private func activateApp() {
+        if #available(macOS 14.0, *) {
+            NSApp.activate()
+        } else {
+            NSApp.activate(ignoringOtherApps: true)
+        }
+    }
+
+    /// transient ポップオーバーはモーダルにキーウィンドウを奪われると閉じてしまうため、
+    /// モーダルの間だけ自動クローズを止めて、設定画面を開いたまま確認できるようにする。
+    private func runModalKeepingPopover(_ alert: NSAlert) -> NSApplication.ModalResponse {
+        let previousBehavior = popover?.behavior
+        popover?.behavior = .applicationDefined
+        defer {
+            if let previousBehavior {
+                popover?.behavior = previousBehavior
+            }
+        }
+        activateApp()
+        return alert.runModal()
     }
 
     @objc func appearanceToggleChanged(_ sender: NSSwitch) {
@@ -531,6 +557,20 @@ final class SettingsViewController: NSViewController, NSPopoverDelegate {
     }
 
     @objc func resetToDefaults() {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = localized("settings.reset.confirm.title")
+        alert.informativeText = localized("settings.reset.confirm.message")
+        alert.addButton(withTitle: localized("settings.reset"))
+        alert.addButton(withTitle: localized("common.cancel"))
+        // 誤操作でいきなり全設定が飛ばないよう、破壊的な方を既定ボタンにしない。
+        alert.buttons.first?.keyEquivalent = ""
+        alert.buttons.last?.keyEquivalent = "\r"
+        guard runModalKeepingPopover(alert) == .alertFirstButtonReturn else { return }
+        applyDefaults()
+    }
+
+    func applyDefaults() {
         settingsStore.appearanceAwareColor = false
         settingsStore.rippleColor = Self.colorPresets[0].color
         settingsStore.lightModeColor = Self.colorPresets[0].color

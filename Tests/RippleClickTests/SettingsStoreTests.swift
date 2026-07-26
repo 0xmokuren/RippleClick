@@ -441,4 +441,47 @@ final class SettingsStoreTests: XCTestCase {
             XCTAssertNotEqual(localized(tab.titleKey), tab.titleKey)
         }
     }
+
+    /// resetToDefaults は確認モーダルを挟むので、実処理の applyDefaults を直接検証する。
+    func testApplyDefaultsRestoresSettings() {
+        let store = makeStore()
+        let viewController = SettingsViewController(settingsStore: store)
+        _ = viewController.view
+
+        store.appearanceAwareColor = true
+        store.rightClickEnabled = false
+        store.doubleClickEnabled = false
+        store.maxRippleSize = 300
+        store.animationDuration = 1.5
+        store.rippleOpacity = 0.2
+        store.soundEnabled = true
+        store.soundType = .sonar
+        store.soundVolume = 0.9
+        viewController.selectedClickType = .rightClick
+
+        viewController.applyDefaults()
+
+        XCTAssertFalse(store.appearanceAwareColor)
+        XCTAssertTrue(store.rightClickEnabled)
+        XCTAssertTrue(store.doubleClickEnabled)
+        XCTAssertEqual(store.maxRippleSize, SettingsViewController.sizeSteps[2])
+        XCTAssertEqual(
+            store.animationDuration, SettingsViewController.speedSteps[2], accuracy: 0.001)
+        XCTAssertEqual(store.rippleOpacity, SettingsViewController.opacitySteps[2], accuracy: 0.001)
+        XCTAssertFalse(store.soundEnabled)
+        XCTAssertEqual(store.soundType, .softClick)
+        XCTAssertEqual(store.soundVolume, SettingsViewController.volumeSteps[2], accuracy: 0.001)
+        XCTAssertEqual(viewController.selectedClickType, .leftClick)
+    }
+
+    func testResetConfirmStringsAreLocalized() {
+        let keys = [
+            "settings.reset.confirm.title",
+            "settings.reset.confirm.message",
+            "common.cancel",
+        ]
+        for key in keys {
+            XCTAssertNotEqual(localized(key), key)
+        }
+    }
 }

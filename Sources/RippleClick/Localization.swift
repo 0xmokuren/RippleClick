@@ -31,6 +31,11 @@ let allLocalizationStrings: [String: [String: String]] = [
         "settings.clickType.rightEnabled": "Right-click ripple",
         "settings.clickType.doubleEnabled": "Double-click ripple",
         "settings.reset": "Reset to Defaults",
+        "settings.reset.confirm.title": "Reset all settings to defaults?",
+        "settings.reset.confirm.message":
+            "Ripple, color, sound and general settings all return to their initial values. "
+            + "This can't be undone.",
+        "common.cancel": "Cancel",
         "color.cyan": "Cyan",
         "color.blue": "Blue",
         "color.navy": "Navy",
@@ -85,6 +90,10 @@ let allLocalizationStrings: [String: [String: String]] = [
         "settings.clickType.rightEnabled": "右クリック波紋",
         "settings.clickType.doubleEnabled": "ダブルクリック波紋",
         "settings.reset": "デフォルトに戻す",
+        "settings.reset.confirm.title": "設定をデフォルトに戻しますか？",
+        "settings.reset.confirm.message":
+            "波紋・色・サウンド・一般のすべての設定が初期値に戻ります。この操作は取り消せません。",
+        "common.cancel": "キャンセル",
         "color.cyan": "シアン",
         "color.blue": "ブルー",
         "color.navy": "ネイビー",
@@ -139,6 +148,9 @@ let allLocalizationStrings: [String: [String: String]] = [
         "settings.clickType.rightEnabled": "右键波纹",
         "settings.clickType.doubleEnabled": "双击波纹",
         "settings.reset": "恢复默认设置",
+        "settings.reset.confirm.title": "要将所有设置恢复为默认值吗？",
+        "settings.reset.confirm.message": "波纹、颜色、声音和通用设置都将恢复为初始值。此操作无法撤销。",
+        "common.cancel": "取消",
         "color.cyan": "青色",
         "color.blue": "蓝色",
         "color.navy": "海军蓝",
@@ -193,6 +205,10 @@ let allLocalizationStrings: [String: [String: String]] = [
         "settings.clickType.rightEnabled": "우클릭 파문",
         "settings.clickType.doubleEnabled": "더블클릭 파문",
         "settings.reset": "기본값으로 복원",
+        "settings.reset.confirm.title": "모든 설정을 기본값으로 되돌릴까요?",
+        "settings.reset.confirm.message":
+            "물결, 색상, 사운드, 일반 설정이 모두 초기값으로 돌아갑니다. 이 작업은 되돌릴 수 없습니다.",
+        "common.cancel": "취소",
         "color.cyan": "시안",
         "color.blue": "블루",
         "color.navy": "네이비",
