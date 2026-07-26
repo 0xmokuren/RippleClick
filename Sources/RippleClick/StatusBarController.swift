@@ -2,10 +2,14 @@ import AppKit
 
 @MainActor
 final class StatusBarController {
+    /// transient ポップオーバーが自身で閉じた直後の再オープンを抑止する猶予。
+    private static let reopenSuppressInterval: TimeInterval = 0.25
+
     private let statusItem: NSStatusItem
     private let settingsStore: SettingsStore
     private var settingsViewController: SettingsViewController?
     private var settingsPopover: NSPopover?
+    private var popoverCloseTime: Date = .distantPast
     private var contextMenu: NSMenu?
     private var toggleMenuItem: NSMenuItem?
 
@@ -64,6 +68,16 @@ final class StatusBarController {
 
     private func setupStatusButton() {
         let menu = NSMenu()
+
+        let settingsItem = NSMenuItem(
+            title: localized("menu.settings"),
+            action: #selector(showSettings),
+            keyEquivalent: ""
+        )
+        settingsItem.target = self
+        menu.addItem(settingsItem)
+
+        menu.addItem(.separator())
 
         toggleMenuItem = NSMenuItem(
             title: localized("menu.toggle"),
@@ -130,36 +144,53 @@ final class StatusBarController {
         statusItem.menu = nil
     }
 
+    @objc private func showSettings() {
+        showPopover()
+    }
+
     private func togglePopover() {
         if let popover = settingsPopover, popover.isShown {
             popover.performClose(nil)
             settingsPopover = nil
             return
         }
-
-        if settingsViewController == nil {
-            let viewController = SettingsViewController(settingsStore: settingsStore)
-            viewController.onEffectToggle = { [weak self] enabled in
-                self?.handleEffectToggled(enabled)
-            }
-            settingsViewController = viewController
+        // transient ポップオーバーは自前のイベント監視で mouseDown 時に閉じるため、
+        // ボタンの action(mouseUp) が届く時点では isShown が false になっている。
+        // 直前に閉じたケースを弾かないと、アイコンクリックで閉じられなくなる。
+        if Date().timeIntervalSince(popoverCloseTime) < Self.reopenSuppressInterval {
+            return
         }
+        showPopover()
+    }
+
+    private func showPopover() {
+        guard let button = statusItem.button else { return }
+
+        let viewController = settingsViewController ?? makeSettingsViewController()
+        settingsViewController = viewController
 
         let popover = NSPopover()
-        popover.contentViewController = settingsViewController
+        popover.contentViewController = viewController
         popover.behavior = .transient
         popover.animates = false
-        popover.delegate = settingsViewController
+        popover.delegate = viewController
         settingsPopover = popover
-        settingsViewController?.popover = popover
-        settingsViewController?.syncEffectToggle()
+        viewController.popover = popover
+        viewController.prepareForDisplay()
 
-        guard let button = statusItem.button else { return }
-        if let viewController = settingsViewController {
-            viewController.applyPopoverGeometry(viewHeight: viewController.popoverViewHeight())
-        }
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         activateApp()
+    }
+
+    private func makeSettingsViewController() -> SettingsViewController {
+        let viewController = SettingsViewController(settingsStore: settingsStore)
+        viewController.onEffectToggle = { [weak self] enabled in
+            self?.handleEffectToggled(enabled)
+        }
+        viewController.onPopoverClose = { [weak self] in
+            self?.popoverCloseTime = Date()
+        }
+        return viewController
     }
 
     private func activateApp() {

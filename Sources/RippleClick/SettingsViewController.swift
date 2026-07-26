@@ -28,24 +28,28 @@ final class SettingsViewController: NSViewController, NSPopoverDelegate {
     ]
 
     static let contentWidth: CGFloat = 380
-    static let baseHeight: CGFloat = 632
-    static let appearanceExtraHeight: CGFloat = 100
-    static let clickTypeToggleHeight: CGFloat = 28
-    // ヘッダー(常時表示帯)の高さ。下に出る効果トグル行(=32)とは別概念。
+    // 常時表示のクローム。ヘッダー(効果 ON/OFF)とタブバーはスクロールしない。
     static let headerHeight: CGFloat = 36
-    // buildSections から取り除いた効果トグル行が元々占めていた高さ。
-    // documentHeight でドキュメント高から差し引く。headerHeight(36)とは独立。
-    static let effectToggleRowHeight: CGFloat = 32
+    static let tabBarHeight: CGFloat = 40
+    static let contentTopPadding: CGFloat = 18
+    static let contentBottomPadding: CGFloat = 20
+    /// 同一タブ内でセクションを並べるときの縦の間隔。
+    static let sectionGap: CGFloat = 28
+    static let minViewHeight: CGFloat = 200
     static let margin: CGFloat = 20
+    static let rowHeight: CGFloat = 20
     static let colorButtonSize: CGFloat = 28
     static let colorButtonSpacing: CGFloat = 8
 
     let settingsStore: SettingsStore
     weak var popover: NSPopover?
     var onEffectToggle: ((Bool) -> Void)?
+    var onPopoverClose: (() -> Void)?
     var scrollView: NSScrollView?
     var sectionsView: NSView?
     var headerView: NSView?
+    var tabBarView: NSView?
+    var tabControl: NSSegmentedControl?
     var effectToggle: NSSwitch?
     var sizeSlider: NSSlider?
     var speedSlider: NSSlider?
@@ -59,8 +63,12 @@ final class SettingsViewController: NSViewController, NSPopoverDelegate {
     var soundTypePopUp: NSPopUpButton?
     var soundPreviewButton: NSButton?
     var volumeSlider: NSSlider?
+    var selectedTab: SettingsTab = .ripple
     var selectedClickType: ClickType = .leftClick
     var clickTypeEnabledToggle: NSSwitch?
+
+    /// buildSections が実際に積んだ高さ。ポップオーバーの高さはこれから逆算する。
+    private var measuredContentHeight: CGFloat = 0
 
     init(settingsStore: SettingsStore) {
         self.settingsStore = settingsStore
@@ -72,23 +80,31 @@ final class SettingsViewController: NSViewController, NSPopoverDelegate {
     }
 
     override func loadView() {
-        let height = popoverViewHeight()
         let effectView = NSVisualEffectView(
-            frame: NSRect(x: 0, y: 0, width: Self.contentWidth, height: height))
+            frame: NSRect(
+                x: 0, y: 0, width: Self.contentWidth, height: Self.minViewHeight))
         effectView.material = .popover
         effectView.state = .active
         effectView.blendingMode = .behindWindow
 
+        // クロームは幅を確定させてから中身を組む。幅0の親に追加すると autoresizing の
+        // 比例計算が崩れ、セグメントコントロールなどの幅が壊れる。
         let header = NSView(
             frame: NSRect(
-                x: 0, y: height - Self.headerHeight,
+                x: 0, y: Self.minViewHeight - Self.headerHeight,
                 width: Self.contentWidth, height: Self.headerHeight))
         header.autoresizingMask = [.width, .minYMargin]
 
+        let tabBar = NSView(
+            frame: NSRect(
+                x: 0, y: Self.minViewHeight - Self.chromeHeight,
+                width: Self.contentWidth, height: Self.tabBarHeight))
+        tabBar.autoresizingMask = [.width, .minYMargin]
+
         let scroll = NSScrollView(
             frame: NSRect(
-                x: 0, y: 0,
-                width: Self.contentWidth, height: height - Self.headerHeight))
+                x: 0, y: 0, width: Self.contentWidth,
+                height: Self.minViewHeight - Self.chromeHeight))
         scroll.drawsBackground = false
         scroll.hasVerticalScroller = true
         scroll.autohidesScrollers = true
@@ -100,58 +116,77 @@ final class SettingsViewController: NSViewController, NSPopoverDelegate {
         scroll.contentView = clip
 
         let sections = NSView(
-            frame: NSRect(
-                x: 0, y: 0, width: Self.contentWidth, height: documentHeight()))
+            frame: NSRect(x: 0, y: 0, width: Self.contentWidth, height: Self.minViewHeight))
         sections.autoresizesSubviews = false
         scroll.documentView = sections
 
         effectView.addSubview(scroll)
+        effectView.addSubview(tabBar)
         effectView.addSubview(header)
         view = effectView
         headerView = header
+        tabBarView = tabBar
         scrollView = scroll
         sectionsView = sections
-        preferredContentSize = view.frame.size
     }
 
     override func viewDidLoad() {
         super.viewDidLoad()
         buildHeader()
-        buildSections()
+        buildTabBar()
+        rebuildContent()
     }
 
-    func contentHeight() -> CGFloat {
-        return Self.baseHeight
-            + (settingsStore.appearanceAwareColor ? Self.appearanceExtraHeight : 0)
-            + (selectedClickType != .leftClick ? Self.clickTypeToggleHeight : 0)
-    }
+    // MARK: - Geometry
 
+    static var chromeHeight: CGFloat { headerHeight + tabBarHeight }
+
+    /// 選択中タブの実測高さにクロームを足したポップオーバーの高さ。
+    /// 画面に収まらない極小ディスプレイ時のみクランプし、その場合だけスクロールが生じる。
     func popoverViewHeight() -> CGFloat {
-        // ヘッダー(36) + documentView がちょうど収まる高さ。
-        // documentHeight は effectToggleRowHeight(32) 基準なので header(36) との差4px を
-        // 足し込むことで scroll 領域とドキュメント高が一致し、スクロールが発生しない。
-        // 画面に収まらない極小ディスプレイ時のみクランプする。
-        let target = documentHeight() + Self.headerHeight
+        let target = documentHeight() + Self.chromeHeight
         let available = (NSScreen.main?.visibleFrame.height ?? 800) - 8
-        return min(target, max(320, available))
+        return min(max(target, Self.minViewHeight), max(Self.minViewHeight, available))
     }
 
     func documentHeight() -> CGFloat {
-        return contentHeight() - Self.effectToggleRowHeight
+        return max(measuredContentHeight, Self.minViewHeight - Self.chromeHeight)
     }
+
+    /// view / header / tabBar / scroll の frame と preferredContentSize を
+    /// 同一の同期パスで揃える。表示中に呼んでも非同期リサイズが挟まらない。
+    func applyGeometry(viewHeight: CGFloat) {
+        let width = Self.contentWidth
+        view.frame.size = NSSize(width: width, height: viewHeight)
+        headerView?.frame = NSRect(
+            x: 0, y: viewHeight - Self.headerHeight, width: width, height: Self.headerHeight)
+        tabBarView?.frame = NSRect(
+            x: 0, y: viewHeight - Self.chromeHeight, width: width, height: Self.tabBarHeight)
+        scrollView?.frame = NSRect(
+            x: 0, y: 0, width: width, height: max(0, viewHeight - Self.chromeHeight))
+        preferredContentSize = NSSize(width: width, height: viewHeight)
+        scrollToTop()
+    }
+
+    /// StatusBarController が show する直前に呼ぶ。トグル状態を実際の設定に合わせ、
+    /// 選択中タブの内容とサイズを確定させる。
+    func prepareForDisplay() {
+        syncEffectToggle()
+        rebuildContent()
+    }
+
+    // MARK: - Content
 
     func buildHeader() {
         guard let header = headerView else { return }
-        let labelHeight: CGFloat = 20
-        let labelY = (Self.headerHeight - labelHeight) / 2
+        let labelY = (Self.headerHeight - Self.rowHeight) / 2
         let label = NSTextField(
-            frame: NSRect(
-                x: Self.margin, y: labelY, width: 230, height: labelHeight))
+            frame: NSRect(x: Self.margin, y: labelY, width: 230, height: Self.rowHeight))
         label.stringValue = localized("settings.effectEnabled")
         label.isEditable = false
         label.isBezeled = false
         label.drawsBackground = false
-        label.font = .systemFont(ofSize: 13)
+        label.font = .systemFont(ofSize: 13, weight: .medium)
         header.addSubview(label)
 
         let toggle = NSSwitch()
@@ -166,41 +201,75 @@ final class SettingsViewController: NSViewController, NSPopoverDelegate {
         self.effectToggle = toggle
         header.addSubview(toggle)
 
-        let separator = NSBox(
-            frame: NSRect(x: 0, y: 0, width: Self.contentWidth, height: 1))
-        separator.boxType = .separator
+        let separator = makeSeparator(width: Self.contentWidth, yPosition: 0)
         separator.autoresizingMask = [.width]
         header.addSubview(separator)
     }
 
-    func buildSections() {
-        guard let sections = sectionsView else { return }
-        let isAppearanceAware = settingsStore.appearanceAwareColor
-        var yOffset = sections.frame.height - 32
-        yOffset = addColorSection(to: sections, yOffset: yOffset, appearanceAware: isAppearanceAware)
-        yOffset = addSizeSection(to: sections, yOffset: yOffset)
-        yOffset = addSpeedSection(to: sections, yOffset: yOffset)
-        yOffset = addOpacitySection(to: sections, yOffset: yOffset)
-        yOffset = addSoundSection(to: sections, yOffset: yOffset)
-        yOffset = addGeneralSection(to: sections, yOffset: yOffset)
-        addBottomButtons(to: sections, yOffset: yOffset)
+    func buildTabBar() {
+        guard let tabBar = tabBarView else { return }
+        let control = NSSegmentedControl(
+            labels: SettingsTab.allCases.map { localized($0.titleKey) },
+            trackingMode: .selectOne,
+            target: self,
+            action: #selector(tabChanged(_:))
+        )
+        control.selectedSegment = selectedTab.rawValue
+        // 4等分にしないとラベル幅に応じた固有幅のままになり、右端のタブが切れる。
+        control.segmentDistribution = .fillEqually
+        let controlHeight: CGFloat = 24
+        control.frame = NSRect(
+            x: Self.margin, y: (Self.tabBarHeight - controlHeight) / 2,
+            width: Self.contentWidth - Self.margin * 2, height: controlHeight)
+        control.autoresizingMask = [.width]
+        self.tabControl = control
+        tabBar.addSubview(control)
+
+        let separator = makeSeparator(width: Self.contentWidth, yPosition: 0)
+        separator.autoresizingMask = [.width]
+        tabBar.addSubview(separator)
     }
 
-    /// NSPopover 非表示時専用（StatusBarController の show 直前からのみ呼ぶ）。
-    /// 表示中(rebuildContent 等)からは絶対に呼ばない。view/header/scroll の frame と
-    /// preferredContentSize をアトミックに揃え、表示中の非同期リサイズを完全に排除する。
-    func applyPopoverGeometry(viewHeight: CGFloat) {
-        view.frame.size = NSSize(width: Self.contentWidth, height: viewHeight)
-        headerView?.frame = NSRect(
-            x: 0, y: viewHeight - Self.headerHeight,
-            width: Self.contentWidth, height: Self.headerHeight)
-        scrollView?.frame = NSRect(
-            x: 0, y: 0,
-            width: Self.contentWidth, height: viewHeight - Self.headerHeight)
-        sectionsView?.frame.size = NSSize(width: Self.contentWidth, height: documentHeight())
-        preferredContentSize = NSSize(width: Self.contentWidth, height: viewHeight)
-        // 開くたびにスクロール位置を上端へリセット（前回のスクロールを引き継がない）。
-        scrollToTop()
+    /// 各タブの内容を y = 0 から下方向へ積む。総高さは積み終わってから実測するので、
+    /// タブごとの高さを定数で持たない（設定項目を増やしても定数調整が不要）。
+    func buildSections() {
+        guard let sections = sectionsView else { return }
+        var yOffset: CGFloat = 0
+        switch selectedTab {
+        case .ripple:
+            yOffset = addSizeSection(to: sections, yOffset: yOffset)
+            yOffset = addSpeedSection(to: sections, yOffset: yOffset - Self.sectionGap)
+            yOffset = addOpacitySection(to: sections, yOffset: yOffset - Self.sectionGap)
+        case .color:
+            yOffset = addColorSection(
+                to: sections, yOffset: yOffset,
+                appearanceAware: settingsStore.appearanceAwareColor)
+        case .sound:
+            yOffset = addSoundSection(to: sections, yOffset: yOffset)
+        case .general:
+            yOffset = addGeneralSection(to: sections, yOffset: yOffset)
+        }
+        alignSectionsToTop(in: sections)
+    }
+
+    /// buildSections が置いたサブビューの占有範囲を実測し、上下パディングを加えた高さの
+    /// documentView に上詰めで収める。
+    private func alignSectionsToTop(in sections: NSView) {
+        guard let maxTop = sections.subviews.map(\.frame.maxY).max(),
+            let minBottom = sections.subviews.map(\.frame.minY).min()
+        else {
+            measuredContentHeight = 0
+            sections.frame.size = NSSize(width: Self.contentWidth, height: 0)
+            return
+        }
+        let height =
+            (maxTop - minBottom) + Self.contentTopPadding + Self.contentBottomPadding
+        let shift = height - Self.contentTopPadding - maxTop
+        for subview in sections.subviews {
+            subview.frame.origin.y += shift
+        }
+        measuredContentHeight = height
+        sections.frame.size = NSSize(width: Self.contentWidth, height: height)
     }
 
     func rebuildContent() {
@@ -208,19 +277,32 @@ final class SettingsViewController: NSViewController, NSPopoverDelegate {
         for subview in sections.subviews {
             subview.removeFromSuperview()
         }
+        clearControlReferences()
+        buildSections()
+
+        // タブ切替や外観トグルで高さが変わるため、表示中でもリサイズする。
+        // animates = false かつ frame と contentSize を同期パスで揃えるのでちらつかない。
+        let height = popoverViewHeight()
+        applyGeometry(viewHeight: height)
+        if let popover = popover, popover.isShown {
+            popover.contentSize = NSSize(width: Self.contentWidth, height: height)
+        }
+    }
+
+    private func clearControlReferences() {
         colorButtons = []
         lightColorButtons = []
         darkColorButtons = []
         clickTypeEnabledToggle = nil
+        appearanceToggle = nil
+        sizeSlider = nil
+        speedSlider = nil
+        opacitySlider = nil
         soundToggle = nil
         soundTypePopUp = nil
         soundPreviewButton = nil
         volumeSlider = nil
-        // 表示中はサイズを一切変えない（view/header/scroll frame と preferredContentSize は
-        // 触らない）。変えるのは documentView 高のみ。view 高は show 直前に確定済み。
-        sections.frame.size = NSSize(width: Self.contentWidth, height: documentHeight())
-        buildSections()
-        scrollToTop()
+        loginToggle = nil
     }
 
     func scrollToTop() {
@@ -240,6 +322,10 @@ final class SettingsViewController: NSViewController, NSPopoverDelegate {
 
     @objc func popoverDidShow(_ notification: Notification) {
         scrollToTop()
+    }
+
+    @objc func popoverDidClose(_ notification: Notification) {
+        onPopoverClose?()
     }
 
     // MARK: - Click type color helpers
@@ -307,6 +393,17 @@ final class SettingsViewController: NSViewController, NSPopoverDelegate {
         effectToggle?.state = settingsStore.isEnabled ? .on : .off
     }
 
+    func selectTab(_ tab: SettingsTab) {
+        selectedTab = tab
+        tabControl?.selectedSegment = tab.rawValue
+        rebuildContent()
+    }
+
+    @objc func tabChanged(_ sender: NSSegmentedControl) {
+        guard let tab = SettingsTab(rawValue: sender.selectedSegment) else { return }
+        selectTab(tab)
+    }
+
     @objc func effectToggleChanged(_ sender: NSSwitch) {
         let newState = (sender.state == .on)
         settingsStore.isEnabled = newState
@@ -315,6 +412,10 @@ final class SettingsViewController: NSViewController, NSPopoverDelegate {
 
     @objc func quitApp() {
         NSApp.terminate(nil)
+    }
+
+    @objc func showAboutPanel() {
+        NSApp.orderFrontStandardAboutPanel(nil)
     }
 
     @objc func appearanceToggleChanged(_ sender: NSSwitch) {
@@ -409,24 +510,13 @@ final class SettingsViewController: NSViewController, NSPopoverDelegate {
         settingsStore.doubleClickDarkColor = Self.colorPresets[0].color
 
         settingsStore.maxRippleSize = Self.sizeSteps[2]
-        sizeSlider?.integerValue = 2
-
         settingsStore.animationDuration = Self.speedSteps[2]
-        speedSlider?.integerValue = 2
-
         settingsStore.rippleOpacity = Self.opacitySteps[2]
-        opacitySlider?.integerValue = 2
 
         settingsStore.launchAtLogin = false
-        loginToggle?.state = .off
-
         settingsStore.soundEnabled = false
-        soundToggle?.state = .off
-        soundPreviewButton?.isEnabled = false
         settingsStore.soundType = .softClick
-        soundTypePopUp?.selectItem(at: SoundType.allCases.firstIndex(of: .softClick) ?? 4)
         settingsStore.soundVolume = Self.volumeSteps[2]
-        volumeSlider?.integerValue = 2
 
         selectedClickType = .leftClick
         rebuildContent()
@@ -434,7 +524,15 @@ final class SettingsViewController: NSViewController, NSPopoverDelegate {
 
     @objc func soundToggleChanged(_ sender: NSSwitch) {
         settingsStore.soundEnabled = (sender.state == .on)
-        soundPreviewButton?.isEnabled = (sender.state == .on)
+        updateSoundControlsEnabled()
+    }
+
+    /// クリック音 OFF のときは種類・音量・試聴を操作対象から外す。
+    func updateSoundControlsEnabled() {
+        let enabled = settingsStore.soundEnabled
+        soundTypePopUp?.isEnabled = enabled
+        volumeSlider?.isEnabled = enabled
+        soundPreviewButton?.isEnabled = enabled
     }
 
     @objc func soundPreviewPressed(_ sender: NSButton) {

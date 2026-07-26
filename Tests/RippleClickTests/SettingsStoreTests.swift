@@ -355,7 +355,7 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertGreaterThan(viewController.preferredContentSize.height, 0)
     }
 
-    func testDocumentHeightAccommodatesContentForAllClickTypes() {
+    func testEveryTabMeasuresContentForAllClickTypes() {
         let store = makeStore()
         let viewController = SettingsViewController(settingsStore: store)
         _ = viewController.view
@@ -363,42 +363,58 @@ final class SettingsStoreTests: XCTestCase {
             store.appearanceAwareColor = aware
             for clickType in [ClickType.leftClick, .rightClick, .doubleClick] {
                 viewController.selectedClickType = clickType
-                let expected =
-                    viewController.contentHeight() - SettingsViewController.effectToggleRowHeight
-                XCTAssertEqual(viewController.documentHeight(), expected, accuracy: 0.5)
-                XCTAssertGreaterThan(viewController.documentHeight(), 0)
+                for tab in SettingsTab.allCases {
+                    viewController.selectTab(tab)
+                    XCTAssertGreaterThan(
+                        viewController.documentHeight(), 0,
+                        "tab \(tab) should measure a positive content height")
+                    XCTAssertEqual(
+                        viewController.popoverViewHeight(),
+                        viewController.documentHeight() + SettingsViewController.chromeHeight,
+                        accuracy: 0.5)
+                }
             }
         }
     }
 
-    func testContentHeightReflectsAppearanceAndClickType() {
+    func testSelectTabUpdatesPreferredContentSize() {
+        let store = makeStore()
+        let viewController = SettingsViewController(settingsStore: store)
+        _ = viewController.view
+        for tab in SettingsTab.allCases {
+            viewController.selectTab(tab)
+            XCTAssertEqual(viewController.selectedTab, tab)
+            XCTAssertEqual(
+                viewController.preferredContentSize.height,
+                viewController.popoverViewHeight(), accuracy: 0.5)
+            XCTAssertEqual(
+                viewController.view.frame.height, viewController.popoverViewHeight(),
+                accuracy: 0.5)
+        }
+    }
+
+    func testColorTabGrowsWithAppearanceAwareAndClickType() {
         let store = makeStore()
         let viewController = SettingsViewController(settingsStore: store)
         _ = viewController.view
         store.appearanceAwareColor = false
         viewController.selectedClickType = .leftClick
-        let base = viewController.contentHeight()
-        XCTAssertEqual(base, SettingsViewController.baseHeight, accuracy: 0.5)
-        viewController.selectedClickType = .rightClick
-        XCTAssertEqual(
-            viewController.contentHeight(), base + SettingsViewController.clickTypeToggleHeight,
-            accuracy: 0.5)
-        store.appearanceAwareColor = true
-        viewController.selectedClickType = .leftClick
-        XCTAssertEqual(
-            viewController.contentHeight(), base + SettingsViewController.appearanceExtraHeight,
-            accuracy: 0.5)
-    }
+        viewController.selectTab(.color)
+        let base = viewController.documentHeight()
 
-    func testRebuildContentDoesNotChangePreferredContentSize() {
-        let store = makeStore()
-        let viewController = SettingsViewController(settingsStore: store)
-        _ = viewController.view
-        let before = viewController.preferredContentSize
         viewController.selectedClickType = .rightClick
         viewController.rebuildContent()
-        XCTAssertEqual(viewController.preferredContentSize.width, before.width, accuracy: 0.5)
-        XCTAssertEqual(viewController.preferredContentSize.height, before.height, accuracy: 0.5)
-        XCTAssertEqual(viewController.view.frame.height, before.height, accuracy: 0.5)
+        XCTAssertGreaterThan(viewController.documentHeight(), base)
+
+        store.appearanceAwareColor = true
+        viewController.selectedClickType = .leftClick
+        viewController.rebuildContent()
+        XCTAssertGreaterThan(viewController.documentHeight(), base)
+    }
+
+    func testTabTitlesAreLocalizedForEveryTab() {
+        for tab in SettingsTab.allCases {
+            XCTAssertNotEqual(localized(tab.titleKey), tab.titleKey)
+        }
     }
 }
