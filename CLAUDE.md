@@ -45,6 +45,7 @@ Swift Package は2つのターゲットに分離されている:
 
 ### 押さえるべき設計上のポイント
 
+- **設定 UI はコード生成の絶対配置＋実測レイアウト** — アイコン左クリックで `StatusBarController` が `NSPopover`（`.transient` / `animates = false`）をアイコン直下に出す。中身は `SettingsViewController`: 常時表示のヘッダー（波紋エフェクト ON/OFF）＋タブバー（`SettingsTab`: ripple / color / sound / general）＋スクロール領域。各タブは `buildSections()` が y = 0 から下方向に絶対座標で積み、`alignSectionsToTop` がサブビューの占有範囲を実測してから documentView の高さを決める（**タブごとの高さ定数を持たない**ので、項目を増減しても定数調整は不要）。タブ切替・外観トグル・リセットは `rebuildContent()` を通り、frame と `preferredContentSize`、`popover.contentSize` を同一同期パスで揃えてリサイズする。transient ポップオーバーは mouseDown で自ら閉じるため、`StatusBarController` は直近のクローズ時刻を見て mouseUp での再オープンを抑止している（この抑止を外すとアイコンクリックで閉じられなくなる）。
 - **`SettingsStore`** — UserDefaults ラッパー（`@MainActor` シングルトン）で全設定の唯一の真実源。色変更系の setter は `.rippleColorChanged` を post する。数値はすべてクランプされる（maxRippleSize 10–500、rippleOpacity 0.1–1.0、animationDuration 0.1–2.0、soundVolume 0–1）。イニシャライザが2つあり、`private init()` は `UserDefaults.standard`（本番シングルトン）、`init(defaults:)` はテスト用の注入口。
 - **ウィンドウのプール再利用** — `RippleWindowController` は `NSWindow` と `RippleView` を毎回生成・破棄せず `windowPool` で再利用する。同時表示は最大 `maxConcurrentWindows = 10`（超過時は最古をリサイクル）。表示後 `animationDuration + 0.05` 秒でリサイクルに回す。`RippleView.reset()` で再利用、`clearLayers()` でサブレイヤを破棄する。
 - **効果音はファイルではなくプログラム合成** — `SoundPlayer`（`@MainActor` シングルトン）が5種類（`SoundType`: waterDrop / pop / sonar / bubble / softClick）を sin 波＋エンベロープで波形合成し、`AVAudioEngine` で再生する。生成したバッファは種別ごとにキャッシュする。音声リソースファイルは存在しない。
