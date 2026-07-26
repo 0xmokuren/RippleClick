@@ -452,7 +452,19 @@ final class SettingsViewController: NSViewController, NSPopoverDelegate {
     }
 
     @objc func showAboutPanel() {
+        // About パネルは通常ウィンドウレベルなので、フローティングなポップオーバーを開いたままだと
+        // その背面に隠れて何も起きていないように見える。先に閉じ、アクティブ化してから出す。
+        popover?.performClose(nil)
+        activateApp()
         NSApp.orderFrontStandardAboutPanel(nil)
+    }
+
+    private func activateApp() {
+        if #available(macOS 14.0, *) {
+            NSApp.activate()
+        } else {
+            NSApp.activate(ignoringOtherApps: true)
+        }
     }
 
     @objc func appearanceToggleChanged(_ sender: NSSwitch) {
