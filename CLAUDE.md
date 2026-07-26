@@ -43,6 +43,18 @@ Swift Package は2つのターゲットに分離されている:
 
 クリック種別ごとの差: **右クリックは2重リング**、**ダブルクリックはサイズ1.2倍・線幅2倍**。色も種別ごとに独立して設定できる（通常/ライト/ダークの3系統）。
 
+### 設定 UI（ポップオーバー）
+
+Interface Builder は使わず、すべてコードで絶対座標配置している。関連ファイルは `SettingsViewController.swift`（骨組みとアクション）/ `SettingsViewController+Sections.swift`（各タブの中身と UI ヘルパー）/ `SettingsTab.swift`（タブ定義）。
+
+- **開き方** — アイコン**左クリック**で `StatusBarController` が `NSPopover`（`.transient` / `animates = false`）をアイコン直下に出す。**右クリック**は従来のコンテキストメニュー（設定 / エフェクト切替 / About / 終了）。
+- **構成** — 常時表示のヘッダー（波紋エフェクト ON/OFF）＋タブバー（`SettingsTab`: ripple / color / sound / general）＋スクロール領域。タブは `NSSegmentedControl` で、`segmentDistribution = .fillEqually` を外すとラベル幅のまま右端が切れる。
+- **高さは定数ではなく実測** — `buildSections()` が y = 0 から下方向に積み、`alignSectionsToTop` がサブビューの占有範囲を実測して documentView 高を決める。**タブごとの高さ定数は持たない**ので、項目を増減しても定数調整は不要。
+- **表示中は `view.frame` を書き換えない** — `NSPopover` は contentSize を view の実寸から見ているため、先に縮めると `popover.contentSize` の代入が同値扱いで無視され、ウィンドウだけ前のタブの高さに取り残されて上部に空き帯ができる。表示中（`rebuildContent()` 経由のタブ切替・外観トグル・リセット）は `popover.contentSize` だけを設定し、ウィンドウと view のリサイズは popover に任せる。
+- **クロームの追従は `setFrameSize` から同期的に行う** — リサイズは frame 変更が先に走り `viewDidLayout` は次のレイアウトパスまで来ないため、そこに任せると1フレームだけヘッダーが旧位置に残る。ルートビュー `SettingsContainerView` の `setFrameSize` から `layoutChrome()` を呼んでいる。
+- **アイコンクリックでの開閉** — transient ポップオーバーは mouseDown で自ら閉じるため、ボタンの action（mouseUp）時点では `isShown` が false になっている。`StatusBarController` は直近のクローズ時刻を見て再オープンを抑止している（この抑止を外すとアイコンクリックで閉じられなくなる）。
+- 子ビューは**親の幅を確定させてから** addSubview する。幅0の親に足すと autoresizing の比例計算が崩れて幅が壊れる。
+
 ### 押さえるべき設計上のポイント
 
 - **`SettingsStore`** — UserDefaults ラッパー（`@MainActor` シングルトン）で全設定の唯一の真実源。色変更系の setter は `.rippleColorChanged` を post する。数値はすべてクランプされる（maxRippleSize 10–500、rippleOpacity 0.1–1.0、animationDuration 0.1–2.0、soundVolume 0–1）。イニシャライザが2つあり、`private init()` は `UserDefaults.standard`（本番シングルトン）、`init(defaults:)` はテスト用の注入口。
@@ -69,6 +81,8 @@ Swift Package は2つのターゲットに分離されている:
 ## テスト
 
 テストでは `SettingsStore(defaults:)` イニシャライザに `UserDefaults(suiteName:)` で作った専用 suite を渡し、テスト間の状態を分離する（`RippleWindowControllerTests` の `makeSettingsStore()` が好例）。AppKit/UI に依存するクラスも `@MainActor` テストで直接インスタンス化して検証している。
+
+`LivePopoverTests` だけは例外で、実際に `NSPopover` を表示してタブを往復させ、view 高・ヘッダー位置・ウィンドウ高との差分が一定であることを検証する（ポップオーバー主導のリサイズは実ウィンドウがないと再現できないため）。ポップオーバーを表示できない環境では `XCTSkipUnless` で skip する。高さは実測値なので、UI の行間や項目を変えると期待値も変わる — 落ちたら `swift test --filter LivePopoverTests` の出力で実測値を確認する。
 
 ## リリース
 
