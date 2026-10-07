@@ -71,7 +71,7 @@ brew install --cask rippleclick
 
 Download the latest `.zip` from [Releases](https://github.com/0xmokuren/RippleClick/releases), extract it, and move `RippleClick.app` to your Applications folder.
 
-> **First launch note:** Allow the app via "System Settings" → "Privacy & Security" → "Open Anyway". You will also be prompted to grant **Accessibility** permission, which is required to detect clicks system-wide.
+> **First launch note:** The app is signed with a Developer ID and notarized by Apple, so it opens without a Gatekeeper warning. You will be prompted to grant **Accessibility** permission, which is required to detect clicks system-wide.
 
 ## Usage
 
