@@ -71,6 +71,7 @@ Interface Builder は使わず、すべてコードで絶対座標配置して�
   - 自己署名証明書は `bash scripts/create-signing-cert.sh` で作成し、`SIGNING_IDENTITY="RippleClick Development" bash scripts/bundle.sh` でビルドする。
   - `SIGNING_IDENTITY` が `Developer ID Application` で始まるときだけ `--timestamp` を付ける（公証に必須。自己署名証明書では付けない）。
 - 公証は `scripts/notarize.sh` が行う。App Store Connect API キー（`NOTARY_API_KEY_PATH` / `NOTARY_API_KEY_ID` / `NOTARY_API_ISSUER_ID`）で `notarytool submit --wait` → `stapler staple` → `spctl --assess` まで実行し、不合格ならログを出して失敗する。
+  - 待ち時間の上限は 2 時間。新しく登録したアカウントの最初の公証は Apple 側で詳しい解析に回され、24〜72 時間かかることがある。上限を超えるとワークフローは失敗扱いになるが、Apple 側の処理は続く。その場合は `xcrun notarytool info <提出 ID>` で `Accepted` を確かめてから、同じタグのワークフローを再実行する（リリースは作られていないのでタグを上げる必要はない）。
 
 ## コードスタイル
 

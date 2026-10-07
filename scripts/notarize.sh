@@ -27,7 +27,7 @@ xcrun notarytool submit "$SUBMIT_ZIP" \
     --key-id "$NOTARY_API_KEY_ID" \
     --issuer "$NOTARY_API_ISSUER_ID" \
     --wait \
-    --timeout 30m \
+    --timeout 2h \
     --output-format json | tee "${SUBMIT_ZIP%.zip}.json"
 
 STATUS=$(/usr/bin/plutil -extract status raw "${SUBMIT_ZIP%.zip}.json")
