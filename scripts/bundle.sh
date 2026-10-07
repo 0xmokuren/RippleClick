@@ -37,7 +37,7 @@ if [ "$SIGNING_IDENTITY" = "-" ]; then
     codesign --force --sign - RippleClick.app
 else
     # Identity-based signing with hardened runtime and entitlements
-    # TCC will remember accessibility permissions across updates
+    # TCC will remember Input Monitoring permissions across updates
     TIMESTAMP_FLAG=()
     if [[ "$SIGNING_IDENTITY" == "Developer ID Application"* ]]; then
         # Notarization requires a secure timestamp (needs network access)

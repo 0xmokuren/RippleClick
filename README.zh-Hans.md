@@ -71,7 +71,7 @@ brew install --cask rippleclick
 
 从 [Releases](https://github.com/0xmokuren/RippleClick/releases) 下载最新的 `.zip` 文件，解压后将 `RippleClick.app` 移动到“应用程序”文件夹。
 
-> **首次启动提示：** 本应用已使用 Developer ID 签名并经过 Apple 公证，打开时不会出现 Gatekeeper 警告。为在系统范围内检测点击操作，系统会要求授予 **辅助功能** 权限。
+> **首次启动提示：** 本应用已使用 Developer ID 签名并经过 Apple 公证，打开时不会出现 Gatekeeper 警告。为在系统范围内检测点击操作，系统会要求授予 **输入监控** 权限（“系统设置”→“隐私与安全性”→“输入监控”）。如果授权后没有立即出现波纹，请退出并重新启动应用。
 
 ## 使用方法
 
@@ -87,7 +87,7 @@ brew install --cask rippleclick
 
 ## 隐私
 
-RippleClick 申请辅助功能权限，仅用于知晓点击发生的“时间”与“位置”，以便绘制波纹。它 **不会** 记录、存储或上传你的任何点击或输入内容，也没有任何网络访问与统计分析。
+RippleClick 申请输入监控权限，仅用于知晓点击发生的“时间”与“位置”，以便绘制波纹。它只接收鼠标按键按下的事件，不会监控键盘。它 **不会** 记录、存储或上传你的任何点击或输入内容，也没有任何网络访问与统计分析。
 
 ## 构建（面向开发者）
 
@@ -100,7 +100,7 @@ bash scripts/bundle.sh   # 发布构建（.app 应用包）
 open RippleClick.app
 ```
 
-> 辅助功能权限是按二进制文件授予的，因此建议用生成的 `.app` 而非 `swift run` 来验证行为。架构说明与签名/发布流程详见 [CLAUDE.md](CLAUDE.md)。
+> 输入监控权限是按二进制文件授予的，因此建议用生成的 `.app` 而非 `swift run` 来验证行为。架构说明与签名/发布流程详见 [CLAUDE.md](CLAUDE.md)。
 
 ## 参与贡献
 
