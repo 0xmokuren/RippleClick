@@ -18,10 +18,53 @@ jobs:
         id: version
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
+      # Developer ID 証明書と公証用 API キーを一時キーチェーン・一時ファイルに展開する。
+      # どれか1つでも欠けていればリリースを作る前に止める（未署名版を配布しないため）。
+      - name: Import signing certificate
+        env:
+          DEVELOPER_ID_CERT_P12_BASE64: ${{ secrets.DEVELOPER_ID_CERT_P12_BASE64 }}
+          DEVELOPER_ID_CERT_PASSWORD: ${{ secrets.DEVELOPER_ID_CERT_PASSWORD }}
+          NOTARY_API_KEY_P8_BASE64: ${{ secrets.NOTARY_API_KEY_P8_BASE64 }}
+          SIGNING_IDENTITY: ${{ secrets.SIGNING_IDENTITY }}
+          NOTARY_API_KEY_ID: ${{ secrets.NOTARY_API_KEY_ID }}
+          NOTARY_API_ISSUER_ID: ${{ secrets.NOTARY_API_ISSUER_ID }}
+        run: |
+          for name in DEVELOPER_ID_CERT_P12_BASE64 DEVELOPER_ID_CERT_PASSWORD NOTARY_API_KEY_P8_BASE64 \
+                      SIGNING_IDENTITY NOTARY_API_KEY_ID NOTARY_API_ISSUER_ID; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Secret ${name} is not set"
+              exit 1
+            fi
+          done
+
+          KEYCHAIN_PATH="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          CERT_PATH="$RUNNER_TEMP/developer_id.p12"
+          echo "$DEVELOPER_ID_CERT_P12_BASE64" | base64 --decode > "$CERT_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$DEVELOPER_ID_CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+          rm -f "$CERT_PATH"
+
+          NOTARY_API_KEY_PATH="$RUNNER_TEMP/AuthKey_${NOTARY_API_KEY_ID}.p8"
+          echo "$NOTARY_API_KEY_P8_BASE64" | base64 --decode > "$NOTARY_API_KEY_PATH"
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+          echo "NOTARY_API_KEY_PATH=$NOTARY_API_KEY_PATH" >> "$GITHUB_ENV"
+
       - name: Build App Bundle
         env:
-          SIGNING_IDENTITY: ${{ secrets.SIGNING_IDENTITY || '-' }}
+          SIGNING_IDENTITY: ${{ secrets.SIGNING_IDENTITY }}
         run: bash scripts/bundle.sh "${{ steps.version.outputs.version }}"
+
+      - name: Notarize App Bundle
+        env:
+          NOTARY_API_KEY_ID: ${{ secrets.NOTARY_API_KEY_ID }}
+          NOTARY_API_ISSUER_ID: ${{ secrets.NOTARY_API_ISSUER_ID }}
+        run: bash scripts/notarize.sh RippleClick.app
 
       - name: Create ZIP
         run: ditto -c -k --keepParent RippleClick.app "RippleClick-${{ steps.version.outputs.version }}.zip"
@@ -97,3 +140,11 @@ jobs:
           git add Casks/rippleclick.rb
           git commit -m "Update RippleClick to v${{ steps.version.outputs.version }}"
           git push
+
+      - name: Clean up signing materials
+        if: always()
+        run: |
+          if [ -n "${KEYCHAIN_PATH:-}" ]; then
+            security delete-keychain "$KEYCHAIN_PATH" || true
+          fi
+          rm -f "${NOTARY_API_KEY_PATH:-}"

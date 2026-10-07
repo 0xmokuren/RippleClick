@@ -38,7 +38,12 @@ if [ "$SIGNING_IDENTITY" = "-" ]; then
 else
     # Identity-based signing with hardened runtime and entitlements
     # TCC will remember accessibility permissions across updates
-    codesign --force --options runtime \
+    TIMESTAMP_FLAG=()
+    if [[ "$SIGNING_IDENTITY" == "Developer ID Application"* ]]; then
+        # Notarization requires a secure timestamp (needs network access)
+        TIMESTAMP_FLAG=(--timestamp)
+    fi
+    codesign --force --options runtime ${TIMESTAMP_FLAG[@]+"${TIMESTAMP_FLAG[@]}"} \
         --sign "$SIGNING_IDENTITY" \
         --entitlements Resources/RippleClick.entitlements \
         RippleClick.app

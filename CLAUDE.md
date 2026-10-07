@@ -69,6 +69,8 @@ Interface Builder は使わず、すべてコードで絶対座標配置して�
   - 既定は **ad-hoc 署名**（`"-"`）。この場合、アプリ更新のたびに TCC（アクセシビリティ）権限がリセットされる。
   - `SIGNING_IDENTITY` に Developer ID か自己署名証明書を指定すると、hardened runtime + `Resources/RippleClick.entitlements` で署名され、**TCC 権限が更新をまたいで保持される**。
   - 自己署名証明書は `bash scripts/create-signing-cert.sh` で作成し、`SIGNING_IDENTITY="RippleClick Development" bash scripts/bundle.sh` でビルドする。
+  - `SIGNING_IDENTITY` が `Developer ID Application` で始まるときだけ `--timestamp` を付ける（公証に必須。自己署名証明書では付けない）。
+- 公証は `scripts/notarize.sh` が行う。App Store Connect API キー（`NOTARY_API_KEY_PATH` / `NOTARY_API_KEY_ID` / `NOTARY_API_ISSUER_ID`）で `notarytool submit --wait` → `stapler staple` → `spctl --assess` まで実行し、不合格ならログを出して失敗する。
 
 ## コードスタイル
 
@@ -94,6 +96,17 @@ git tag v0.0.X
 git push origin v0.0.X
 # あとは CI が自動処理する
 ```
+
+Release ワークフローは Developer ID 署名と公証を必須にしている。次の Secrets が1つでも欠けているとリリース作成前に失敗する。
+
+| Secret | 内容 |
+| --- | --- |
+| `SIGNING_IDENTITY` | `Developer ID Application: 氏名 (TEAMID)` |
+| `DEVELOPER_ID_CERT_P12_BASE64` | Developer ID Application 証明書（秘密鍵込みの .p12）を base64 にしたもの |
+| `DEVELOPER_ID_CERT_PASSWORD` | .p12 のパスワード |
+| `NOTARY_API_KEY_P8_BASE64` | App Store Connect API キー（.p8）を base64 にしたもの |
+| `NOTARY_API_KEY_ID` | API キーの Key ID |
+| `NOTARY_API_ISSUER_ID` | API キーの Issuer ID |
 
 **注意点:**
 

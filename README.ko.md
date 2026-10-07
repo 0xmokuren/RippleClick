@@ -71,7 +71,7 @@ brew install --cask rippleclick
 
 [Releases](https://github.com/0xmokuren/RippleClick/releases)에서 최신 `.zip` 파일을 다운로드하고, 압축을 해제한 후 `RippleClick.app`을 Applications 폴더로 이동하세요.
 
-> **첫 실행 시 참고:** "시스템 설정" → "개인정보 보호 및 보안" → "확인 없이 열기"에서 허용해야 합니다. 또한 시스템 전역의 클릭 감지를 위해 **손쉬운 사용** 권한을 요청합니다.
+> **첫 실행 시 참고:** 앱은 Developer ID로 서명되고 Apple의 공증을 받았으므로 Gatekeeper 경고 없이 열립니다. 시스템 전역의 클릭 감지를 위해 **손쉬운 사용** 권한을 요청합니다.
 
 ## 사용 방법
 
