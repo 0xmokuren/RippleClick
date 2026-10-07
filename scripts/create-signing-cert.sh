@@ -1,6 +1,6 @@
 #!/bin/bash
 # Create a self-signed certificate for code signing RippleClick.
-# This allows macOS TCC to remember accessibility permissions across updates.
+# This allows macOS TCC to remember Input Monitoring permissions across updates.
 #
 # Usage: bash scripts/create-signing-cert.sh
 #

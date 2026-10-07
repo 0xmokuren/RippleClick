@@ -36,7 +36,11 @@ Swift Package は2つのターゲットに分離されている:
 `AppDelegate` が起動時に `NSApp.setActivationPolicy(.accessory)` を設定し、`SettingsStore.shared` を生成して `StatusBarController`（メニューバーUI）と `ClickMonitor`（グローバルクリック監視）に注入する。さらに `effectiveAppearance` を KVO 監視し、ライト/ダーク切替時に `appearanceAwareColor` が有効なら `.rippleColorChanged` を post する。
 
 クリック検知フロー:
-1. `ClickMonitor` が `NSEvent.addGlobalMonitorForEvents([.leftMouseDown, .rightMouseDown])` **と** `addLocalMonitorForEvents` の**両方**で監視する。グローバル監視は自アプリがアクティブな間はイベントを受け取らないため、それだけだと設定ポップオーバーを開いている最中に波紋が出ない（設定を触りながら見え方を試せない）。両者は排他なので二重発火しない。ローカル監視はアクセシビリティ権限が無くても動くので、権限未許可でも設定画面上のプレビューは機能する
+1. `ClickMonitor` が **入力監視（Input Monitoring）権限**で動く `CGEventTap`（`.cgSessionEventTap` / `.listenOnly`、左右の mouseDown のみ）でクリックを監視する。App Sandbox 下ではアクセシビリティ権限が使えず `NSEvent.addGlobalMonitorForEvents` に頼れないため、App Store 版と Developer ID 版の両方でこの方式に統一している。
+   - CGEventTap は自アプリ宛てのクリックも受け取るので、**タップが張れている間はローカル監視を張らない**（張ると波紋が二重に出る）。
+   - 権限が無い間は `addLocalMonitorForEvents` で代用し、設定ポップオーバー上のプレビューだけは動かす。同時に `CGRequestListenEventAccess` で権限を要求し、`accessPollInterval`（2 秒）ごとに `CGPreflightListenEventAccess` を確認して、許可されたらタップへ切り替えてローカル監視を外す。
+   - 権限の確認と要求は `ListenEventAccess` に切り出してあり、テストでは差し替えて実際の TCC の状態に依存しないようにしている。
+   - タップが `tapDisabledByTimeout` / `tapDisabledByUserInput` で止められたらコールバック内で有効に戻す。
 2. 種別を判定（右クリック / `clickCount >= 2` のダブルクリック / 左クリック）し、各種別の有効フラグを確認してから `RippleWindowController.showRipple(at:clickType:)` を呼ぶ
 3. `RippleWindowController` がクリック種別に応じてサイズ・色・リング数・線幅を決め、透明ボーダレスウィンドウを生成 → `RippleView`（CALayer アニメーション）が波紋を描画
 4. `soundEnabled` なら `SoundPlayer.shared.playSound` で効果音を再生
@@ -62,15 +66,23 @@ Interface Builder は使わず、すべてコードで絶対座標配置して�
 - **効果音はファイルではなくプログラム合成** — `SoundPlayer`（`@MainActor` シングルトン）が5種類（`SoundType`: waterDrop / pop / sonar / bubble / softClick）を sin 波＋エンベロープで波形合成し、`AVAudioEngine` で再生する。生成したバッファは種別ごとにキャッシュする。音声リソースファイルは存在しない。
 - **ログイン項目** — `LoginItemManager` が `SMAppService.mainApp` で登録/解除する。**実際の .app バンドル（bundle identifier が必要）でのみ動作**し、`swift run` では機能しない。
 
-## アクセシビリティ権限とコード署名（動作確認に必須）
+## 入力監視権限とコード署名（動作確認に必須）
 
-- グローバルクリック監視には**アクセシビリティ権限が必須**。未許可だと監視が動かない（`ClickMonitor.start()` が起動時に `AXIsProcessTrustedWithOptions` で要求する）。`swift run` で動かす実行バイナリにも個別に権限付与が必要なので、挙動確認は基本的に `bundle.sh` で生成した `.app` で行う。
+- グローバルクリック監視には**入力監視権限が必須**。未許可の間は設定画面上のプレビューしか動かない（`ClickMonitor.start()` が起動時に `CGRequestListenEventAccess` で要求する）。`swift run` で動かす実行バイナリにも個別に権限付与が必要なので、挙動確認は基本的に `bundle.sh` で生成した `.app` で行う。
 - `bundle.sh` の署名は `SIGNING_IDENTITY` 環境変数で切り替わる:
-  - 既定は **ad-hoc 署名**（`"-"`）。この場合、アプリ更新のたびに TCC（アクセシビリティ）権限がリセットされる。
+  - 既定は **ad-hoc 署名**（`"-"`）。この場合、アプリ更新のたびに TCC（入力監視）権限がリセットされる。
   - `SIGNING_IDENTITY` に Developer ID か自己署名証明書を指定すると、hardened runtime + `Resources/RippleClick.entitlements` で署名され、**TCC 権限が更新をまたいで保持される**。
   - 自己署名証明書は `bash scripts/create-signing-cert.sh` で作成し、`SIGNING_IDENTITY="RippleClick Development" bash scripts/bundle.sh` でビルドする。
   - `SIGNING_IDENTITY` が `Developer ID Application` で始まるときだけ `--timestamp` を付ける（公証に必須。自己署名証明書では付けない）。
 - 公証は `scripts/notarize.sh` が行う。App Store Connect API キー（`NOTARY_API_KEY_PATH` / `NOTARY_API_KEY_ID` / `NOTARY_API_ISSUER_ID`）で `notarytool submit --wait` → `stapler staple` → `spctl --assess` まで実行し、不合格ならログを出して失敗する。
+
+## Mac App Store 版
+
+- `scripts/bundle-appstore.sh <version> [build-number]` が App Store 提出用の `.pkg` を作る。arm64 のみでビルドし、`embedded.provisionprofile` を同梱して `Resources/RippleClick-AppStore.entitlements`（App Sandbox）で署名し、`productbuild` でインストーラー署名付きの pkg にする。アップロードは Transporter で行う。
+- 必要なもの: `PROVISIONING_PROFILE`（App ID `com.0xmokuren.RippleClick` の Mac App Store 用プロファイル）、アプリ署名用の Apple Distribution 証明書、インストーラー署名用の Mac Installer Distribution 証明書。署名 ID は `APP_SIGNING_IDENTITY` / `INSTALLER_SIGNING_IDENTITY` で上書きできる。
+- 出力先の既定は一時ディレクトリ。リポジトリが iCloud 同期下（`~/Documents` 等）にあると File Provider が `com.apple.FinderInfo` を付け直し、`codesign --verify --strict` が失敗するため。同じ理由で、手元の `swift test` がテストバンドルの署名で失敗する場合は `--scratch-path` で同期対象外に出力する。
+- App Store に提出する同じバージョンを再アップロードするときは `build-number` を上げる（`CFBundleVersion` は提出のたびに増やす必要がある）。
+- Info.plist の `LSApplicationCategoryType`（App Store 提出に必須）と `ITSAppUsesNonExemptEncryption = false`（暗号の輸出規制の質問を省く）は Developer ID 版にもそのまま入っていて問題ない。
 
 ## コードスタイル
 

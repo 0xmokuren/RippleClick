@@ -56,16 +56,36 @@ final class ClickMonitorTests: XCTestCase {
         XCTAssertEqual(monitor.rippleWindowController.activeWindows.count, 0)
     }
 
-    /// グローバル監視だけでは自アプリがアクティブな間のクリックを拾えず、設定ポップオーバーを
-    /// 開いたまま見え方を試せない。ローカル監視も張られることを担保する。
-    func testStartInstallsBothGlobalAndLocalMonitors() {
-        let monitor = ClickMonitor(settingsStore: makeSettingsStore())
+    /// 入力監視の権限が無い間は CGEventTap を張れないため、設定ポップオーバー上でプレビューできるよう
+    /// ローカル監視で代用し、権限も要求する。
+    func testStartFallsBackToLocalMonitorWithoutListenAccess() {
+        var requestCount = 0
+        let access = ListenEventAccess(isGranted: { false }, request: { requestCount += 1 })
+        let monitor = ClickMonitor(settingsStore: makeSettingsStore(), listenEventAccess: access)
         monitor.start()
-        XCTAssertNotNil(monitor.globalMonitor)
+        XCTAssertNil(monitor.eventTap)
         XCTAssertNotNil(monitor.localMonitor)
+        XCTAssertEqual(requestCount, 1)
 
         monitor.stop()
-        XCTAssertNil(monitor.globalMonitor)
+        XCTAssertNil(monitor.eventTap)
         XCTAssertNil(monitor.localMonitor)
+    }
+
+    /// 権限がまだ無いと分かっている間は、ポーリングしても CGEventTap に切り替えずローカル監視を保つ。
+    func testSwitchToEventTapKeepsLocalMonitorWhileAccessIsDenied() {
+        let access = ListenEventAccess(isGranted: { false }, request: {})
+        let monitor = ClickMonitor(settingsStore: makeSettingsStore(), listenEventAccess: access)
+        monitor.start()
+        monitor.switchToEventTapIfGranted()
+        XCTAssertNil(monitor.eventTap)
+        XCTAssertNotNil(monitor.localMonitor)
+        monitor.stop()
+    }
+
+    func testRightClickShowsRippleViaCGEventPath() {
+        let monitor = ClickMonitor(settingsStore: makeSettingsStore())
+        monitor.handleClick(isRightClick: true, clickCount: 1)
+        XCTAssertEqual(monitor.rippleWindowController.activeWindows.count, 1)
     }
 }
