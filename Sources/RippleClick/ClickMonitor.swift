@@ -9,7 +9,21 @@ struct ListenEventAccess {
 
     static let system = ListenEventAccess(
         isGranted: { CGPreflightListenEventAccess() },
-        request: { _ = CGRequestListenEventAccess() }
+        request: {
+            _ = CGRequestListenEventAccess()
+            // CGRequestListenEventAccess だけではダイアログが出ず、入力監視の一覧にも載らない環境があるため、
+            // listen-only のタップを実際に作ろうとして要求を確実に届ける。作れても使わずにすぐ破棄する。
+            if let probe = CGEvent.tapCreate(
+                tap: .cgSessionEventTap,
+                place: .headInsertEventTap,
+                options: .listenOnly,
+                eventsOfInterest: CGEventMask(1) << CGEventType.leftMouseDown.rawValue,
+                callback: { _, _, event, _ in Unmanaged.passUnretained(event) },
+                userInfo: nil
+            ) {
+                CFMachPortInvalidate(probe)
+            }
+        }
     )
 }
 
