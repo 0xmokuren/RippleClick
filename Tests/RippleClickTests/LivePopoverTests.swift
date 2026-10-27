@@ -10,7 +10,7 @@ final class LivePopoverTests: XCTestCase {
     func testPopoverResizesConsistentlyOnTabSwitch() throws {
         guard let defaults = UserDefaults(suiteName: "live.popover.suite") else { return }
         for key in defaults.dictionaryRepresentation().keys { defaults.removeObject(forKey: key) }
-        let store = SettingsStore(defaults: defaults)
+        let store = SettingsStore(defaults: defaults, loginItemManager: MockLoginItemManager())
         let viewController = SettingsViewController(settingsStore: store)
 
         let window = NSWindow(

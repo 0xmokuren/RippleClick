@@ -1,5 +1,4 @@
 import AppKit
-import ApplicationServices
 
 @MainActor
 final class ClickMonitor {
@@ -19,8 +18,8 @@ final class ClickMonitor {
     }
 
     func start() {
-        requestAccessibilityIfNeeded()
-
+        // Mouse-only AppKit monitors do not require Accessibility access. Global key monitoring does;
+        // keep this mask mouse-only and do not prompt for broader device control access.
         globalMonitor = NSEvent.addGlobalMonitorForEvents(
             matching: [.leftMouseDown, .rightMouseDown]
         ) { [weak self] event in
@@ -67,15 +66,6 @@ final class ClickMonitor {
         if settingsStore.soundEnabled {
             SoundPlayer.shared.playSound(
                 type: settingsStore.soundType, volume: settingsStore.soundVolume)
-        }
-    }
-
-    private func requestAccessibilityIfNeeded() {
-        let trusted = AXIsProcessTrustedWithOptions(
-            [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
-        )
-        if !trusted {
-            print("Accessibility permission not granted. Global click monitoring may not work.")
         }
     }
 

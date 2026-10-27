@@ -5,6 +5,7 @@ public final class SettingsStore {
     public static let shared = SettingsStore()
 
     private let defaults: UserDefaults
+    private let loginItemManager: any LoginItemManaging
 
     private enum Keys {
         static let isEnabled = "isEnabled"
@@ -157,8 +158,8 @@ public final class SettingsStore {
     public var launchAtLogin: Bool {
         get { defaults.bool(forKey: Keys.launchAtLogin) }
         set {
-            let success = LoginItemManager.setEnabled(newValue)
-            defaults.set(success ? newValue : LoginItemManager.isEnabled, forKey: Keys.launchAtLogin)
+            let success = loginItemManager.setEnabled(newValue)
+            defaults.set(success ? newValue : loginItemManager.isEnabled, forKey: Keys.launchAtLogin)
         }
     }
 
@@ -317,10 +318,12 @@ public final class SettingsStore {
 
     private init() {
         self.defaults = UserDefaults.standard
+        self.loginItemManager = LoginItemManager()
     }
 
-    init(defaults: UserDefaults) {
+    init(defaults: UserDefaults, loginItemManager: any LoginItemManaging) {
         self.defaults = defaults
+        self.loginItemManager = loginItemManager
     }
 
     // MARK: - Color helpers

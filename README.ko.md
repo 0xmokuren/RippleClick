@@ -71,7 +71,7 @@ brew install --cask rippleclick
 
 [Releases](https://github.com/0xmokuren/RippleClick/releases)에서 최신 `.zip` 파일을 다운로드하고, 압축을 해제한 후 `RippleClick.app`을 Applications 폴더로 이동하세요.
 
-> **첫 실행 시 참고:** 앱은 Developer ID로 서명되고 Apple의 공증을 받았으므로 Gatekeeper 경고 없이 열립니다. 시스템 전역의 클릭 감지를 위해 **손쉬운 사용** 권한을 요청합니다.
+> **첫 실행 시 참고:** 앱은 Developer ID로 서명되고 Apple의 공증을 받았으므로 Gatekeeper 경고 없이 열립니다. AppKit 이벤트 모니터로 마우스 클릭을 감지하며 손쉬운 사용 권한을 요청하지 않습니다.
 
 ## 사용 방법
 
@@ -87,7 +87,7 @@ brew install --cask rippleclick
 
 ## 개인정보
 
-RippleClick이 손쉬운 사용 권한을 요청하는 이유는 오직 파문을 그리기 위해 클릭이 "언제" "어디서" 발생했는지 알기 위해서입니다. 클릭하거나 입력한 내용을 **기록·저장·전송하지 않습니다**. 네트워크 접속이나 분석도 전혀 하지 않습니다.
+RippleClick은 파문을 그리기 위해 마우스 클릭을 관찰합니다. 클릭하거나 입력한 내용을 **기록·저장·전송하지 않습니다**. 네트워크 접속이나 분석도 하지 않습니다.
 
 ## 빌드 (개발자용)
 
@@ -100,7 +100,7 @@ bash scripts/bundle.sh   # 릴리스 빌드 (.app 번들)
 open RippleClick.app
 ```
 
-> 손쉬운 사용 권한은 바이너리별로 부여되므로, 동작 확인은 `swift run` 보다 생성된 `.app` 으로 하는 것이 확실합니다. 아키텍처 설명과 서명/릴리스 절차는 [CLAUDE.md](CLAUDE.md)를 참고하세요.
+> 생성된 `.app`으로 동작을 확인하세요. 아키텍처와 서명/릴리스 절차는 [CLAUDE.md](CLAUDE.md)를 참고하세요.
 
 ## 기여
 

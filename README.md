@@ -71,7 +71,7 @@ brew install --cask rippleclick
 
 Download the latest `.zip` from [Releases](https://github.com/0xmokuren/RippleClick/releases), extract it, and move `RippleClick.app` to your Applications folder.
 
-> **First launch note:** The app is signed with a Developer ID and notarized by Apple, so it opens without a Gatekeeper warning. You will be prompted to grant **Accessibility** permission, which is required to detect clicks system-wide.
+> **First launch note:** The app is signed with a Developer ID and notarized by Apple, so it opens without a Gatekeeper warning. Mouse clicks are observed through the AppKit event monitor; the app does not request Accessibility access.
 
 ## Usage
 
@@ -87,7 +87,7 @@ Download the latest `.zip` from [Releases](https://github.com/0xmokuren/RippleCl
 
 ## Privacy
 
-RippleClick needs Accessibility permission solely to know *when* and *where* a click happens so it can draw the ripple. It does **not** record, store, or transmit anything you click or type. There is no network access and no analytics.
+RippleClick observes mouse clicks solely to draw the ripple. It does **not** record, store, or transmit anything you click or type. There is no network access and no analytics.
 
 ## Build (For Developers)
 
@@ -100,7 +100,7 @@ bash scripts/bundle.sh   # Release build (.app bundle)
 open RippleClick.app
 ```
 
-> Accessibility permission is granted per binary, so behavior is best verified with the bundled `.app` rather than `swift run`. See [CLAUDE.md](CLAUDE.md) for architecture notes and the signing/release workflow.
+> Verify behavior with the bundled `.app`. See [CLAUDE.md](CLAUDE.md) for architecture notes and the signing/release workflow.
 
 ## Contributing
 

@@ -71,7 +71,7 @@ brew install --cask rippleclick
 
 [Releases](https://github.com/0xmokuren/RippleClick/releases) から最新の `.zip` をダウンロードし、解凍して `RippleClick.app` を Applications フォルダに移動してください。
 
-> **初回起動時の注意:** アプリは Developer ID で署名され Apple の公証を受けているため、Gatekeeper の警告なしで開けます。システム全体のクリック検知のために **アクセシビリティ** 権限の許可を求められます。
+> **初回起動時の注意:** アプリは Developer ID で署名され Apple の公証を受けているため、Gatekeeper の警告なしで開けます。 マウスクリックは AppKit のイベント監視で検知し、アクセシビリティ権限の許可は要求しません。
 
 ## 使い方
 
@@ -87,7 +87,7 @@ brew install --cask rippleclick
 
 ## プライバシー
 
-RippleClick がアクセシビリティ権限を必要とするのは、波紋を描くために「いつ」「どこで」クリックされたかを知るためだけです。クリックや入力した内容を **記録・保存・送信することは一切ありません**。ネットワーク通信も解析も行いません。
+RippleClick は波紋を描くためにマウスクリックを監視します。クリックや入力した内容を **記録・保存・送信することは一切ありません**。ネットワーク通信も解析も行いません。
 
 ## ビルド（開発者向け）
 
@@ -100,7 +100,7 @@ bash scripts/bundle.sh   # リリースビルド（.app バンドル）
 open RippleClick.app
 ```
 
-> アクセシビリティ権限はバイナリごとに付与されるため、挙動確認は `swift run` よりも生成した `.app` で行うのが確実です。アーキテクチャや署名・リリース手順は [CLAUDE.md](CLAUDE.md) を参照してください。
+> 挙動確認は生成した `.app` で行ってください。アーキテクチャや署名・リリース手順は [CLAUDE.md](CLAUDE.md) を参照してください。
 
 ## コントリビュート
 

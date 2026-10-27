@@ -8,7 +8,31 @@ final class SettingsStoreTests: XCTestCase {
     private func makeStore() -> SettingsStore {
         let suiteName = "com.0xmokuren.RippleClickTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
-        return SettingsStore(defaults: defaults)
+        return SettingsStore(defaults: defaults, loginItemManager: MockLoginItemManager())
+    }
+
+    func testLaunchAtLoginPersistsSuccessfulRequest() {
+        let defaults = UserDefaults(suiteName: "com.0xmokuren.RippleClickTests.\(UUID().uuidString)")!
+        let manager = MockLoginItemManager()
+        let store = SettingsStore(defaults: defaults, loginItemManager: manager)
+
+        store.launchAtLogin = true
+
+        XCTAssertEqual(manager.requestedValues, [true])
+        XCTAssertTrue(store.launchAtLogin)
+    }
+
+    func testLaunchAtLoginFailureKeepsReportedSystemState() {
+        let defaults = UserDefaults(suiteName: "com.0xmokuren.RippleClickTests.\(UUID().uuidString)")!
+        let manager = MockLoginItemManager()
+        manager.isEnabled = true
+        manager.succeeds = false
+        let store = SettingsStore(defaults: defaults, loginItemManager: manager)
+
+        store.launchAtLogin = false
+
+        XCTAssertEqual(manager.requestedValues, [false])
+        XCTAssertTrue(store.launchAtLogin)
     }
 
     func testIsEnabledDefaultsToTrue() {
@@ -322,7 +346,7 @@ final class SettingsStoreTests: XCTestCase {
         let suiteName = "com.0xmokuren.RippleClickTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.set("nonexistentSound", forKey: "soundType")
-        let store = SettingsStore(defaults: defaults)
+        let store = SettingsStore(defaults: defaults, loginItemManager: MockLoginItemManager())
         XCTAssertEqual(store.soundType, .softClick)
     }
 
@@ -444,7 +468,10 @@ final class SettingsStoreTests: XCTestCase {
 
     /// resetToDefaults は確認モーダルを挟むので、実処理の applyDefaults を直接検証する。
     func testApplyDefaultsRestoresSettings() {
-        let store = makeStore()
+        let defaults = UserDefaults(suiteName: "com.0xmokuren.RippleClickTests.\(UUID().uuidString)")!
+        let manager = MockLoginItemManager()
+        manager.isEnabled = true
+        let store = SettingsStore(defaults: defaults, loginItemManager: manager)
         let viewController = SettingsViewController(settingsStore: store)
         _ = viewController.view
 
@@ -472,6 +499,8 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.soundType, .softClick)
         XCTAssertEqual(store.soundVolume, SettingsViewController.volumeSteps[2], accuracy: 0.001)
         XCTAssertEqual(viewController.selectedClickType, .leftClick)
+        XCTAssertEqual(manager.requestedValues, [false])
+        XCTAssertFalse(store.launchAtLogin)
     }
 
     func testResetConfirmStringsAreLocalized() {

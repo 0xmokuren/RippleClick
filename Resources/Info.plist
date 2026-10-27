@@ -27,7 +27,5 @@
     <string>AppIcon</string>
     <key>LSUIElement</key>
     <true/>
-    <key>NSAccessibilityUsageDescription</key>
-    <string>RippleClick needs accessibility access to detect mouse clicks and show ripple effects.</string>
 </dict>
 </plist>

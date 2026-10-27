@@ -36,7 +36,7 @@ Swift Package は2つのターゲットに分離されている:
 `AppDelegate` が起動時に `NSApp.setActivationPolicy(.accessory)` を設定し、`SettingsStore.shared` を生成して `StatusBarController`（メニューバーUI）と `ClickMonitor`（グローバルクリック監視）に注入する。さらに `effectiveAppearance` を KVO 監視し、ライト/ダーク切替時に `appearanceAwareColor` が有効なら `.rippleColorChanged` を post する。
 
 クリック検知フロー:
-1. `ClickMonitor` が `NSEvent.addGlobalMonitorForEvents([.leftMouseDown, .rightMouseDown])` **と** `addLocalMonitorForEvents` の**両方**で監視する。グローバル監視は自アプリがアクティブな間はイベントを受け取らないため、それだけだと設定ポップオーバーを開いている最中に波紋が出ない（設定を触りながら見え方を試せない）。両者は排他なので二重発火しない。ローカル監視はアクセシビリティ権限が無くても動くので、権限未許可でも設定画面上のプレビューは機能する
+1. `ClickMonitor` が `NSEvent.addGlobalMonitorForEvents([.leftMouseDown, .rightMouseDown])` **と** `addLocalMonitorForEvents` の**両方**で監視する。グローバル監視は自アプリがアクティブな間はイベントを受け取らないため、それだけだと設定ポップオーバーを開いている最中に波紋が出ない（設定を触りながら見え方を試せない）。両者は排他なので二重発火しない。マウスイベントのみを監視するため、グローバル・ローカルともアクセシビリティ権限を要求しない
 2. 種別を判定（右クリック / `clickCount >= 2` のダブルクリック / 左クリック）し、各種別の有効フラグを確認してから `RippleWindowController.showRipple(at:clickType:)` を呼ぶ
 3. `RippleWindowController` がクリック種別に応じてサイズ・色・リング数・線幅を決め、透明ボーダレスウィンドウを生成 → `RippleView`（CALayer アニメーション）が波紋を描画
 4. `soundEnabled` なら `SoundPlayer.shared.playSound` で効果音を再生
@@ -57,19 +57,18 @@ Interface Builder は使わず、すべてコードで絶対座標配置して�
 
 ### 押さえるべき設計上のポイント
 
-- **`SettingsStore`** — UserDefaults ラッパー（`@MainActor` シングルトン）で全設定の唯一の真実源。色変更系の setter は `.rippleColorChanged` を post する。数値はすべてクランプされる（maxRippleSize 10–500、rippleOpacity 0.1–1.0、animationDuration 0.1–2.0、soundVolume 0–1）。イニシャライザが2つあり、`private init()` は `UserDefaults.standard`（本番シングルトン）、`init(defaults:)` はテスト用の注入口。
+- **`SettingsStore`** — UserDefaults ラッパー（`@MainActor` シングルトン）で全設定の唯一の真実源。色変更系の setter は `.rippleColorChanged` を post する。数値はすべてクランプされる（maxRippleSize 10–500、rippleOpacity 0.1–1.0、animationDuration 0.1–2.0、soundVolume 0–1）。イニシャライザが2つあり、`private init()` は `UserDefaults.standard`（本番シングルトン）、`init(defaults:loginItemManager:)` はテスト用の注入口（OS のログイン項目を触らないモックを必ず渡す）。
 - **ウィンドウのプール再利用** — `RippleWindowController` は `NSWindow` と `RippleView` を毎回生成・破棄せず `windowPool` で再利用する。同時表示は最大 `maxConcurrentWindows = 10`（超過時は最古をリサイクル）。表示後 `animationDuration + 0.05` 秒でリサイクルに回す。`RippleView.reset()` で再利用、`clearLayers()` でサブレイヤを破棄する。
 - **効果音はファイルではなくプログラム合成** — `SoundPlayer`（`@MainActor` シングルトン）が5種類（`SoundType`: waterDrop / pop / sonar / bubble / softClick）を sin 波＋エンベロープで波形合成し、`AVAudioEngine` で再生する。生成したバッファは種別ごとにキャッシュする。音声リソースファイルは存在しない。
 - **ログイン項目** — `LoginItemManager` が `SMAppService.mainApp` で登録/解除する。**実際の .app バンドル（bundle identifier が必要）でのみ動作**し、`swift run` では機能しない。
 
-## アクセシビリティ権限とコード署名（動作確認に必須）
+## マウス監視とコード署名
 
-- グローバルクリック監視には**アクセシビリティ権限が必須**。未許可だと監視が動かない（`ClickMonitor.start()` が起動時に `AXIsProcessTrustedWithOptions` で要求する）。`swift run` で動かす実行バイナリにも個別に権限付与が必要なので、挙動確認は基本的に `bundle.sh` で生成した `.app` で行う。
-- `bundle.sh` の署名は `SIGNING_IDENTITY` 環境変数で切り替わる:
-  - 既定は **ad-hoc 署名**（`"-"`）。この場合、アプリ更新のたびに TCC（アクセシビリティ）権限がリセットされる。
-  - `SIGNING_IDENTITY` に Developer ID か自己署名証明書を指定すると、hardened runtime + `Resources/RippleClick.entitlements` で署名され、**TCC 権限が更新をまたいで保持される**。
-  - 自己署名証明書は `bash scripts/create-signing-cert.sh` で作成し、`SIGNING_IDENTITY="RippleClick Development" bash scripts/bundle.sh` でビルドする。
-  - `SIGNING_IDENTITY` が `Developer ID Application` で始まるときだけ `--timestamp` を付ける（公証に必須。自己署名証明書では付けない）。
+- `ClickMonitor` は `NSEvent` の `.leftMouseDown` / `.rightMouseDown` だけを監視する。Apple の AppKit 仕様ではアクセシビリティ権限が必要なのはキーイベントのグローバル監視であり、このマウス監視には不要。`AXIsProcessTrustedWithOptions` や入力監視の要求を追加しないこと。`swift run` と `.app` の両方に適用される。
+- 仕様: https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/EventOverview/MonitoringEvents/MonitoringEvents.html
+- `bundle.sh` の署名は `SIGNING_IDENTITY` 環境変数で切り替わる。既定は ad-hoc（`"-"`）。この designated requirement はコードハッシュに依存し、再ビルドすると以前の TCC 許可と一致しない場合がある。現在のマウス監視はその許可に依存しない。
+- 配布ワークフローは Developer ID 署名と公証を必須にしている。署名は配布の信頼性のために引き続き必要だが、不要なアクセシビリティ要求を正当化するものではない。
+- 証明書・秘密鍵の作成、既存資格情報の用途変更、署名設定の変更は、具体的な対象と影響を確認してから行う。
 - 公証は `scripts/notarize.sh` が行う。App Store Connect API キー（`NOTARY_API_KEY_PATH` / `NOTARY_API_KEY_ID` / `NOTARY_API_ISSUER_ID`）で `notarytool submit --wait` → `stapler staple` → `spctl --assess` まで実行し、不合格ならログを出して失敗する。
 
 ## コードスタイル
@@ -82,7 +81,7 @@ Interface Builder は使わず、すべてコードで絶対座標配置して�
 
 ## テスト
 
-テストでは `SettingsStore(defaults:)` イニシャライザに `UserDefaults(suiteName:)` で作った専用 suite を渡し、テスト間の状態を分離する（`RippleWindowControllerTests` の `makeSettingsStore()` が好例）。AppKit/UI に依存するクラスも `@MainActor` テストで直接インスタンス化して検証している。
+テストでは `SettingsStore(defaults:loginItemManager:)` イニシャライザに `UserDefaults(suiteName:)` で作った専用 suite を渡し、`MockLoginItemManager` を必ず注入し、テスト間の状態と OS のログイン項目操作を分離する（`RippleWindowControllerTests` の `makeSettingsStore()` が好例）。AppKit/UI に依存するクラスも `@MainActor` テストで直接インスタンス化して検証している。
 
 `LivePopoverTests` だけは例外で、実際に `NSPopover` を表示してタブを往復させ、view 高・ヘッダー位置・ウィンドウ高との差分が一定であることを検証する（ポップオーバー主導のリサイズは実ウィンドウがないと再現できないため）。ポップオーバーを表示できない環境では `XCTSkipUnless` で skip する。高さは実測値なので、UI の行間や項目を変えると期待値も変わる — 落ちたら `swift test --filter LivePopoverTests` の出力で実測値を確認する。
 

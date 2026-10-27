@@ -1,8 +1,14 @@
 import ServiceManagement
 
-enum LoginItemManager {
+@MainActor
+protocol LoginItemManaging {
+    func setEnabled(_ enabled: Bool) -> Bool
+    var isEnabled: Bool { get }
+}
+
+struct LoginItemManager: LoginItemManaging {
     @discardableResult
-    static func setEnabled(_ enabled: Bool) -> Bool {
+    func setEnabled(_ enabled: Bool) -> Bool {
         guard Bundle.main.bundleIdentifier != nil else { return false }
 
         do {
@@ -18,7 +24,7 @@ enum LoginItemManager {
         }
     }
 
-    static var isEnabled: Bool {
+    var isEnabled: Bool {
         SMAppService.mainApp.status == .enabled
     }
 }

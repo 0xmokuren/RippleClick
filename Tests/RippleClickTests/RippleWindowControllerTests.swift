@@ -8,7 +8,7 @@ final class RippleWindowControllerTests: XCTestCase {
     private func makeSettingsStore() -> SettingsStore {
         let suiteName = "com.0xmokuren.RippleClickTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
-        return SettingsStore(defaults: defaults)
+        return SettingsStore(defaults: defaults, loginItemManager: MockLoginItemManager())
     }
 
     func testShowRippleAddsActiveWindow() {
